@@ -1,0 +1,52 @@
+import {test,before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {timing,progress} from './domain.mjs';
+test('Quy tắc thời gian: chưa khởi công, thiếu hạn, quá hạn, hoàn thành, gia hạn',()=>{
+assert.equal(timing({handoverActual:'2026-01-01'},'2026-01-10').elapsed,null);
+assert.equal(timing({},'2026-01-10').label,'Chưa có thời hạn');
+assert.equal(timing({start:'2026-01-01',deadline:'2026-01-09',status:'Tạm dừng'},'2026-01-10').label,'Quá hạn 1 ngày');
+assert.equal(timing({start:'2026-01-01',deadline:'2026-01-09',completed:'2026-01-11'},'2026-02-10').elapsed,10);
+assert.equal(timing({deadline:'2026-01-09',completed:'2026-01-11'},'2026-02-10').label,'Hoàn thành chậm 2 ngày');
+assert.equal(timing({deadline:'2026-01-20'},'2026-01-10').remaining,10);
+assert.equal(timing({deadline:'2026-01-10'},'2026-01-10').label,'Sắp đến hạn · 0 ngày');
+assert.equal(timing({deadline:'2026-01-09',status:'Đã hủy'},'2026-01-10').kind,'neutral');
+});
+test('Tiến độ dùng trọng số với nhiều đơn vị tính',()=>{assert.equal(progress([{unit:'m',done:5,approved:10,weight:2},{unit:'bộ',done:1,approved:1,weight:1}]),67);assert.equal(progress([]),null)});
+const data=mkdtempSync(join(tmpdir(),'hatang-test-'));let child,adminCookie,viewerCookie,managerCookie,project;
+async function req(path,method='GET',body,cookie=adminCookie){const r=await fetch('http://127.0.0.1:3107/api/'+path,{method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]}}
+before(async()=>{child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3107',DATA_DIR:data},stdio:'pipe'});await new Promise((resolve,reject)=>{child.stdout.once('data',resolve);child.once('error',reject);setTimeout(()=>reject(new Error('Server timeout')),10000).unref()});});
+after(async()=>{child?.kill();await new Promise(r=>setTimeout(r,500));rmSync(data,{recursive:true,force:true})});
+test('Luồng thật: đăng nhập, quyền, lưu, xung đột, gia hạn, duyệt và chuyển một lần',async()=>{
+assert.equal((await req('records')).status,401);
+assert.equal((await req('setup','POST',{name:'Quản trị',username:'admin',password:'test-password-123'})).status,201);
+adminCookie=(await req('login','POST',{username:'admin',password:'test-password-123'})).cookie;
+await req('users','POST',{name:'Xem',username:'viewer',password:'test-password-123',role:'viewer'});
+await req('users','POST',{name:'Giám sát',username:'manager',password:'test-password-123',role:'manager'});
+viewerCookie=(await req('login','POST',{username:'viewer',password:'test-password-123'})).cookie;
+managerCookie=(await req('login','POST',{username:'manager',password:'test-password-123'})).cookie;
+let out=await req('records','POST',{kind:'project',name:'Công trình thử nghiệm',status:'Chưa khởi công',deadline:'2026-01-09',items:[{name:'Ống',unit:'m',approved:10,done:0,weight:1}]});assert.equal(out.status,201);project=out.data;
+assert.equal((await req('records','POST',{kind:'project',name:'X'},viewerCookie)).status,403);
+assert.equal((await req('records/'+project.id,'GET',null,managerCookie)).status,404);
+project=(await req('records/'+project.id,'PUT',{...project,assignees:[2,3]})).data;
+assert.equal((await req('records/'+project.id,'GET',null,viewerCookie)).status,200);
+assert.equal((await req('records/'+project.id,'PUT',project,viewerCookie)).status,403);
+const stale={...project};project=(await req('records/'+project.id,'PUT',{...project,notes:'Đã lưu'})).data;
+assert.equal((await req('records/'+project.id,'PUT',stale)).status,409);
+assert.equal((await req('records/'+project.id+'/deadline','POST',{version:project.version,deadline:'2026-02-01',reason:'Mưa'},managerCookie)).status,403);
+project=(await req('records/'+project.id+'/deadline','POST',{version:project.version,deadline:'2026-02-01',reason:'Điều chỉnh đã duyệt'})).data;
+assert.equal(project.initialDeadline,'2026-01-09');assert.equal(project.history[0].old,'2026-01-09');
+assert.equal((await req('records/'+project.id,'PUT',{...project,items:[{name:'Sai',unit:'m',approved:0,done:2,weight:1}]})).status,400);
+let proposal=(await req('records','POST',{kind:'proposal',name:'Đề xuất thử',items:[]})).data;
+for(const status of ['Gửi đề xuất','Khảo sát/thẩm định','Chờ phê duyệt','Đã phê duyệt']){out=await req(`records/${proposal.id}/transition`,'POST',{version:proposal.version,status});assert.equal(out.status,200);proposal=out.data}
+out=await req(`records/${proposal.id}/convert`,'POST',{version:proposal.version});assert.equal(out.status,201);assert.equal(out.data.source,proposal.id);assert.notEqual(out.data.id,proposal.id);assert.equal((await req('records/'+out.data.id)).data.kind,'project');
+assert.equal((await req(`records/${proposal.id}/convert`,'POST',{version:proposal.version})).status,409);
+assert.equal((await req('records')).data.filter(r=>r.source===proposal.id).length,1);
+assert.equal((await req('files','POST',{recordId:project.id,name:'bad.pdf',mime:'application/pdf',base64:Buffer.from('wrong').toString('base64')})).status,400);
+out=await req('files','POST',{recordId:project.id,name:'test.pdf',mime:'application/pdf',base64:Buffer.from('%PDF-1.4 test').toString('base64')});assert.equal(out.status,201);
+const file=await fetch(`http://127.0.0.1:3107/api/files/${out.data.id}`,{headers:{Cookie:adminCookie}});assert.equal(await file.text(),'%PDF-1.4 test');
+assert.ok((await req('audit')).data.length>5);
+});
