@@ -5,3 +5,4 @@ backups
 *.log
 tests.mjs
 demo-data
+releases

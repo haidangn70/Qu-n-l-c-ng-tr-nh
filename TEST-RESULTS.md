@@ -1,4 +1,12 @@
-## Bản sửa Render
+## Bản kiểm tra tự động và đóng gói mới
+
+Chạy trên Node.js 24.19.0: **9 nhóm đạt, 0 lỗi**. Ca mới dựng mã nguồn chỉ có tệp gốc, không có public: build tự khôi phục 7 tài nguyên, trang chủ/JS/CSS/manifest/service worker đều trả 200. Gói bị sửa nội dung bị chặn bởi SHA-256 trước khi ghi tệp. Bổ sung ca chặn chuyển trạng thái thiếu dữ liệu/khôi phục hồ sơ đã kết thúc và ca lưu trữ công việc sau khi các hư hỏng đã đóng.
+
+Kiểm tra trình duyệt: đăng nhập minh họa; mở 11 màn hình chính/quản trị, không ghi nhận console error. Kiểm tra bố cục viewport 390 × 844: không tràn ngang toàn trang, bảng có vùng cuộn riêng. Đây là giả lập kích thước trên máy tính, chưa thay thế điện thoại thật.
+
+Docker/CI/Render thực tế chưa chạy: máy chưa có Docker; trình duyệt GitHub và Render chưa đăng nhập. Đã chuẩn bị workflow build/test/Docker và gói cập nhật, chưa tuyên bố deployment thành công.
+
+## Bản sửa Render trước đó
 
 Đã kiểm tra build và 8 nhóm kiểm thử đạt. Ca mới mô phỏng thiếu toàn bộ thư mục public: GET/HEAD trả 500, máy chủ vẫn trả health 200 và bind 0.0.0.0 khi RENDER=true. Chưa triển khai lại trên Render thực tế.
 

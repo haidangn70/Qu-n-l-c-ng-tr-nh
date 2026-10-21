@@ -1,5 +1,15 @@
 # Sửa triển khai Render
 
+## Bản sửa tự kiểm tra và khôi phục giao diện
+
+Đã kiểm tra trực tiếp repository trên GitHub: tại commit 70bd7ba, danh sách tệp ở gốc không có public/, deploy/ hoặc migrations/. Dockerfile cũ COPY public vì vậy thất bại trước khi chạy Node.
+
+Dockerfile mới dùng `bundle-public.mjs` và `public-bundle.json` ở gốc để dựng public/ trong image, sau đó chạy verify-build. Build native cũng tự khôi phục các tệp public còn thiếu. Gói có SHA-256 từng tệp; dữ liệu sai hoặc không khớp nguồn làm build thất bại, không thay thế âm thầm. Sau mỗi lần sửa giao diện, chạy `node bundle-public.mjs` trước khi commit. Cần upload cả hai tệp đóng gói và Dockerfile/verify-build mới. Đây là gói tài nguyên giao diện, không chứa tài khoản hoặc dữ liệu nghiệp vụ.
+
+Healthcheck Docker đã đổi sang PORT của môi trường, hỗ trợ Render cấp cổng 10000. Workflow `.github/workflows/check.yml` đã chuẩn bị: kiểm tra build, toàn bộ test, Docker build và HTTP ở cổng 10000 sau mỗi push/PR; chưa chạy trên GitHub khi chưa có quyền cập nhật repository. Workflow chỉ đọc mã nguồn, không có khóa triển khai hoặc thao tác tự sửa production.
+
+Trình duyệt kiểm tra hiện chưa đăng nhập GitHub/Render; vì vậy các bản sửa đang ở máy làm việc, chưa push hoặc deploy. Không yêu cầu gửi mật khẩu qua chat. Cần chủ tài khoản đăng nhập trong trình duyệt của Codex để tiếp tục kiểm tra tài khoản và cập nhật.
+
 Lỗi ERR_HTTP_HEADERS_SENT trong log là lần ghi header thứ hai khi xử lý lỗi. Bản cũ gửi header 200 trước rồi mới đọc tệp giao diện; nếu tệp thiếu/không đọc được, catch lại gửi JSON và làm tiến trình dừng. Log chưa cho thấy lỗi gốc nên chưa thể kết luận tệp cụ thể nào thiếu.
 
 Đã sửa: đọc tệp/serialize trước khi gửi header; không gửi lại khi response đã kết thúc; kiểm tra headersSent khi xử lý lỗi; lỗi nội bộ trả 500 và ghi mã lỗi vào log. Khi RENDER=true, mặc định bind 0.0.0.0. Dùng Node 24 đã kiểm chứng, không để khoảng phiên bản mở >=24.

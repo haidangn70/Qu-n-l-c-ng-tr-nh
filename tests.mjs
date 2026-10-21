@@ -81,6 +81,9 @@ test('Tài sản → nhiều phiếu/hư hỏng → phê duyệt → sửa chữ
  assert.equal((await call(`records/${work.id}/transition`,'POST',{version:work.version,status:'Đã nghiệm thu'})).status,400);
  work=await update(work,{accepted:'2026-10-26',acceptanceNote:'Đạt yêu cầu',results:Object.fromEntries(damages.map(d=>[d.id,'Đã khắc phục, đạt yêu cầu']))});work=await transition(work,'Đã nghiệm thu');work=await transition(work,'Đã đóng');
  for(let d of damages){for(const status of ['Lập công việc','Thực hiện','Nghiệm thu','Đóng hư hỏng'])d=await transition(d,status)}
+ assert.equal((await call(`records/${work.id}/transition`,'POST',{version:work.version})).status,400);
+ const closedDamage=(await call('records/'+damages[0].id)).data;assert.equal((await call(`records/${closedDamage.id}/transition`,'POST',{version:closedDamage.version,status:'Mới ghi nhận'})).status,400);
+ const archivedWork=await call(`records/${work.id}/archive`,'POST',{version:work.version,archived:true,reason:'Lưu hồ sơ sau khi đóng hư hỏng'});assert.equal(archivedWork.status,200,JSON.stringify(archivedWork.data));
  assert.equal((await call('records/'+asset.id,'GET',null,managerCookie)).status,404);
  assert.equal((await call('records','POST',{kind:'asset'},viewerCookie)).status,403);
  assert.equal((await call('records','GET',null,managerCookie)).data.length,0);
@@ -140,7 +143,7 @@ test('Sao lưu và phục hồi DB cùng tệp vào thư mục sạch',async()=>
 test('Render: thiếu tệp giao diện trả 500, HEAD không làm máy chủ dừng, build phát hiện thiếu tệp',async()=>{
  const fixture=mkdtempSync(join(tmpdir(),'hatang-render-'));let processUnderTest;
  try{
-  for(const file of ['server.mjs','operations.mjs','domain.mjs','xlsx.mjs','verify-build.mjs'])cpSync(join(import.meta.dirname,file),join(fixture,file));
+  for(const file of ['server.mjs','operations.mjs','domain.mjs','xlsx.mjs','verify-build.mjs','bundle-public.mjs'])cpSync(join(import.meta.dirname,file),join(fixture,file));
   const build=spawnSync(process.execPath,['verify-build.mjs'],{cwd:fixture,encoding:'utf8'});assert.equal(build.status,1);assert.match(build.stderr,/Thiếu tệp triển khai bắt buộc/);
   processUnderTest=spawn(process.execPath,[join(fixture,'server.mjs')],{env:{...process.env,HOST:'',PORT:'3110',RENDER:'true',DATA_DIR:join(fixture,'data')},stdio:'pipe'});
   const startup=await new Promise((resolve,reject)=>{processUnderTest.stdout.once('data',b=>resolve(b.toString()));processUnderTest.once('error',reject);setTimeout(()=>reject(Error('Không khởi động được máy chủ thử Render')),10000).unref()});assert.match(startup,/0\.0\.0\.0:3110/);
@@ -149,4 +152,17 @@ test('Render: thiếu tệp giao diện trả 500, HEAD không làm máy chủ d
   assert.equal((await fetch('http://127.0.0.1:3110/healthz',{method:'HEAD'})).status,200);
   assert.equal((await fetch('http://127.0.0.1:3110/healthz')).status,200);
  }finally{if(processUnderTest&&processUnderTest.exitCode===null){const done=new Promise(resolve=>processUnderTest.once('exit',resolve));processUnderTest.kill();await done}rmSync(fixture,{recursive:true,force:true})}
+});
+
+test('Build khi chỉ có tệp gốc: phục hồi giao diện, phục vụ HTTP và chặn gói bị thay đổi',async()=>{
+ const fixture=mkdtempSync(join(tmpdir(),'hatang-bundle-'));let app;
+ try{
+  for(const file of ['package.json','server.mjs','operations.mjs','domain.mjs','xlsx.mjs','verify-build.mjs','bundle-public.mjs','public-bundle.json'])cpSync(join(import.meta.dirname,file),join(fixture,file));
+  const build=spawnSync(process.execPath,['verify-build.mjs'],{cwd:fixture,encoding:'utf8'});assert.equal(build.status,0,build.stderr);assert.match(build.stdout,/phục hồi 7 tệp/);
+  app=spawn(process.execPath,[join(fixture,'server.mjs')],{env:{...process.env,HOST:'127.0.0.1',PORT:'3111',DATA_DIR:join(fixture,'data')},stdio:'pipe'});await new Promise((resolve,reject)=>{app.stdout.once('data',resolve);app.once('error',reject);setTimeout(()=>reject(Error('Hết thời gian khởi động')),10000).unref()});
+  const home=await fetch('http://127.0.0.1:3111/');assert.equal(home.status,200);assert.match(await home.text(),/Phần mềm theo dõi/);
+  for(const path of ['/app.js','/operations.js','/style.css','/icon.svg','/manifest.webmanifest','/sw.js'])assert.equal((await fetch('http://127.0.0.1:3111'+path)).status,200,path);
+  const {restorePublic}=await import('./bundle-public.mjs'),{readFileSync,writeFileSync,existsSync}=await import('node:fs');
+  const corrupt=join(fixture,'corrupt');mkdirSync(corrupt);const bundle=JSON.parse(readFileSync(join(fixture,'public-bundle.json'),'utf8'));bundle.assets['icon.svg'].base64=Buffer.from('đã thay đổi').toString('base64');writeFileSync(join(corrupt,'public-bundle.json'),JSON.stringify(bundle));assert.throws(()=>restorePublic(corrupt),/SHA-256/);assert.equal(existsSync(join(corrupt,'public')),false);
+ }finally{if(app&&app.exitCode===null){const done=new Promise(resolve=>app.once('exit',resolve));app.kill();await done}rmSync(fixture,{recursive:true,force:true})}
 });

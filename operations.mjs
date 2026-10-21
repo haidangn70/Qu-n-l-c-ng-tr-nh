@@ -53,7 +53,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
   }
   if(k==='work'){
    assert(Array.isArray(d.damageIds)&&d.damageIds.length,'Chọn ít nhất một hư hỏng đã phê duyệt');
-   for(const id of d.damageIds){const damage=visible(u,id,'damage');assert(['Phê duyệt','Lập công việc','Thực hiện','Nghiệm thu'].includes(damage.status),'Hư hỏng chưa phê duyệt hoặc đã đóng');}
+   for(const id of d.damageIds){const damage=visible(u,id,'damage');assert(['Phê duyệt','Lập công việc','Thực hiện','Nghiệm thu'].includes(damage.status)||damage.status==='Đóng hư hỏng'&&old?.damageIds?.includes(damage.id)&&['Đã nghiệm thu','Đã đóng'].includes(old.status),'Hư hỏng chưa phê duyệt hoặc đã đóng');}
    assert(d.responsibleId&&d.due,'Cần người phụ trách và hạn hoàn thành');
    assert(Number.isFinite(Number(d.progress))&&Number(d.progress)>=0&&Number(d.progress)<=100,'Tiến độ phải từ 0 đến 100%');
    assert(!d.completed||d.start&&d.completed>=d.start,'Ngày hoàn thành phải từ ngày bắt đầu');
@@ -150,7 +150,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
   writer(u);assert(!r.archived||action==='archive','Hồ sơ đã lưu trữ',409);const b=await body(req);assert(b.version===r.version,'Hồ sơ đã được cập nhật. Giữ nội dung và tải lại để đối chiếu.',409);
   let d={...r};delete d.version;delete d.updated;delete d.id;
   if(action==='transition'){
-   assert(method==='POST'&&flows[r.kind],'Không hỗ trợ chuyển trạng thái');const flow=flows[r.kind],index=flow.indexOf(r.status);
+   assert(method==='POST'&&flows[r.kind],'Không hỗ trợ chuyển trạng thái');assert(typeof b.status==='string'&&b.status.trim(),'Cần chọn trạng thái tiếp theo');assert(!['Đã đóng','Đóng hư hỏng','Đã hủy','Từ chối'].includes(r.status),'Hồ sơ đã kết thúc, không thể chuyển trạng thái');const flow=flows[r.kind],index=flow.indexOf(r.status);
    if(['Yêu cầu bổ sung','Từ chối','Tạm dừng','Đã hủy'].includes(b.status)){approve(u);assert(b.reason?.trim(),'Cần lý do');assert(!['Đã đóng','Đóng hư hỏng','Đã hủy'].includes(r.status),'Hồ sơ đã kết thúc');assert((r.kind==='damage'&&['Yêu cầu bổ sung','Từ chối'].includes(b.status))||(r.kind==='work'&&['Tạm dừng','Đã hủy'].includes(b.status)),'Trạng thái không phù hợp');d.resumeStatus=r.status;}
    else{const next=r.resumeStatus&&['Yêu cầu bổ sung','Tạm dừng'].includes(r.status)?r.resumeStatus:flow[index+1];assert(b.status===next,'Chuyển trạng thái không hợp lệ');if(['Phê duyệt','Đã phê duyệt','Đã nghiệm thu','Đã đóng','Đóng hư hỏng'].includes(b.status))approve(u);}
    if(r.kind==='work'){

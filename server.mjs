@@ -19,7 +19,7 @@ const verify=(p,h)=>{const [s,k]=h.split(':');return timingSafeEqual(scryptSync(
 const audit=(u,a,id,d)=>db.prepare('INSERT INTO audit(at,user_id,action,record_id,detail) VALUES(?,?,?,?,?)').run(new Date().toISOString(),u.id,a,id,JSON.stringify(d));
 const publicUser=u=>({id:u.id,name:u.name,username:u.username,role:u.role,active:u.active,unit:u.unit});
 const parse=r=>r?{...JSON.parse(r.data),id:r.id,kind:r.kind,version:r.version,updated:r.updated}:null;
-const record=id=>parse(db.prepare('SELECT * FROM records WHERE id=?').get(id));
+const record=id=>Number.isSafeInteger(Number(id))&&Number(id)>0?parse(db.prepare('SELECT * FROM records WHERE id=?').get(Number(id))):null;
 const inUnit=(u,r)=>!!u.unit&&(r.unit===u.unit||r.assetId&&record(r.assetId)?.unit===u.unit||r.kind==='work'&&(r.damageIds||[]).some(id=>record(record(id)?.assetId)?.unit===u.unit));
 const allowed=(u,r)=>!!r&&(inUnit(u,r)||u.role==='admin'||u.role==='approver'||r.owner===u.id||Number(r.responsibleId)===u.id||(r.assignees||[]).includes(u.id));
 const assert=(v,m,status=400)=>{if(!v)throw Object.assign(new Error(m),{status})};
