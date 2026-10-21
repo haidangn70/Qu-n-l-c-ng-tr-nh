@@ -1,84 +1,53 @@
-# Quản lý công tác sửa chữa cơ sở hạ tầng
+# Phần mềm theo dõi cơ sở hạ tầng, phương tiện thiết bị
 
-Ứng dụng tiếng Việt chạy thực tế bằng Node.js 24 và SQLite, không phụ thuộc gói npm. Không cài dữ liệu minh họa. Hồ sơ được lưu tại `data/app.sqlite`, tệp tại `data/files/`, không phải trong bộ nhớ trình duyệt. Chỉ bản nháp và dấu đã đọc thông báo nằm trên thiết bị.
+**Phòng Kỹ thuật - Công ty cổ phần Cảng Hải Phòng.**  
+**Người thiết kế: Mr Đăng. · Điện thoại: 0914931888.**
 
-## Chạy ngay
+## Chạy và kiểm thử
 
-1. Cài Node.js phiên bản 24 hoặc mới hơn có `node:sqlite`.
-2. Mở PowerShell trong thư mục dự án và chạy `node server.mjs`.
-3. Truy cập http://127.0.0.1:3000. Lần đầu tạo tài khoản quản trị với mật khẩu ít nhất 12 ký tự. Không có mật khẩu mặc định.
-4. Tạo tài khoản lãnh đạo, quản lý/giám sát và người xem trong **Quản trị**.
-5. Tạo công trình hoặc đề xuất, sau đó phân công tài khoản tại trang cập nhật hồ sơ.
+Yêu cầu Node.js 24 trở lên, không cần cài gói npm.
 
-Có thể dùng `npm start`, `npm test`, `npm run backup` nếu đã có npm. Máy hiện tại có Node.js nhưng không có npm trên PATH; các lệnh `node` tương đương đều hoạt động.
+```powershell
+node server.mjs
+node --test tests.mjs
+```
 
-## Kiến trúc và mô hình dữ liệu
+Mở http://127.0.0.1:3000. Nếu cổng bận, đặt `$env:PORT='3001'` trước khi chạy. Giữ nguyên tài khoản và dữ liệu hiện có. Cài mới: tạo quản trị với mật khẩu tối thiểu 12 ký tự, không có tài khoản mặc định. Chạy HTTPS cần SETUP_TOKEN do quản trị máy chủ cấp.
 
-- Giao diện HTML/CSS/JavaScript thuần, bố cục bảng trên máy tính và thẻ trên điện thoại; manifest và service worker hỗ trợ PWA.
-- Máy chủ HTTP cùng origin với giao diện; API kiểm tra phiên, vai trò và phạm vi hồ sơ. Cookie HttpOnly, SameSite Strict; mật khẩu scrypt với salt ngẫu nhiên; giới hạn thử đăng nhập theo IP trong bộ nhớ.
-- SQLite bật WAL; users, sessions, records, files, audit, settings. Xem `schema.sql`. Các trường nghiệp vụ nằm trong JSON của records; mỗi công trình có nhiều hạng mục, bất cập và đợt tạm dừng. Phiên bản records tăng mỗi lần ghi.
-- Bốn vai trò: admin và approver xem toàn bộ; manager, viewer chỉ xem hồ sơ mình tạo hoặc được gán. Manager cập nhật hồ sơ thuộc phạm vi; viewer không được ghi. Chỉ admin tạo người dùng; admin/approver duyệt đề xuất và hạn mới.
-- Chuyển đề xuất đã duyệt thành công trình là một giao dịch SQLite; cập nhật liên kết gốc cùng lúc và kiểm tra version để ngăn chuyển lặp.
-- Không dùng dịch vụ bên ngoài để lưu dữ liệu. Chưa có triển khai public hoặc tên miền.
-
-## Quy ước nghiệp vụ
-
-- Ngày dương lịch, múi giờ `Asia/Ho_Chi_Minh`. Chênh lệch ngày, không tính bao gồm hai đầu: khởi công hôm nay = 0 ngày. Ngày đến hạn còn 0 ngày; ngày hôm sau mới quá hạn 1 ngày.
-- Không có khởi công thực tế thì chưa tính thời gian thi công, dù đã bàn giao mặt bằng. Hoàn thành thì dừng tính tại ngày hoàn thành thực tế.
-- Thiếu hạn hiển thị **Chưa có thời hạn**. Mặc định cảnh báo trước 7 ngày, có thể cấu hình. Tạm dừng và tình trạng thời hạn độc lập; không tự trừ số ngày tạm dừng.
-- Hạn ban đầu không sửa qua biểu mẫu thông thường. Chức năng phê duyệt hạn lưu hạn cũ/mới, lý do, tên người duyệt và thời điểm. Bản đầu dùng thao tác phê duyệt trực tiếp, chưa có hàng đợi yêu cầu gia hạn riêng.
-- Hạng mục có tên, đơn vị, khối lượng duyệt, khối lượng thực hiện và trọng số. Thực hiện phải trong 0..khối lượng duyệt. Muốn vượt dự toán cần quản lý cập nhật khối lượng duyệt trước. Tiến độ = tổng(tỷ lệ hoàn thành từng hạng mục × trọng số) / tổng trọng số. Không cộng mét với bộ hoặc đơn vị khác.
-- Nguyên nhân dự kiến và kết luận khảo sát lưu riêng; bất cập có trạng thái xác minh riêng. Không tự kết luận trách nhiệm hoặc cộng tổng ngày ảnh hưởng của bất cập trùng nhau.
+`node demo.mjs` chạy minh họa tại http://127.0.0.1:3109, lưu riêng `demo-data/`. Tài khoản `minhhoa` có mật khẩu ngẫu nhiên in ở terminal lần đầu. Tài sản ghi rõ [MINH HỌA]. Không dùng môi trường này cho dữ liệu thật.
 
 ## Hướng dẫn sử dụng
 
-### Công trình
+1. **Quản trị:** tạo tài khoản riêng với vai trò. Trong **Tài khoản / Thông tin**, khóa/mở, đặt lại mật khẩu và cấp phạm vi đơn vị. Người dùng tự đổi mật khẩu với mật khẩu hiện tại. Thay đổi tài khoản thu hồi các phiên cũ.
+2. **Cơ sở hạ tầng / Phương tiện thiết bị:** nhập mã duy nhất, nhóm, đơn vị, khu vực, vị trí, người phụ trách và thông số. Tài sản có tài sản cấp trên; không cho cấu trúc vòng lặp. Vận hành và kỹ thuật tách riêng.
+3. **Chi tiết tài sản → Tạo phiếu kiểm tra:** mỗi lần một hồ sơ riêng. Chọn tình trạng kỹ thuật để cập nhật đánh giá mới nhất và lịch sử. Từ phiếu ghi nhiều hư hỏng, đính kèm ảnh/PDF, mức ưu tiên, hạn và đề xuất.
+4. **Hư hỏng:** Mới ghi nhận → Đánh giá → Đề xuất → Phê duyệt. Lãnh đạo duyệt, trả lại hoặc từ chối; trả lại/từ chối cần lý do.
+5. **Công việc sửa chữa:** chọn nhiều hư hỏng đã duyệt, lập kế hoạch, kinh phí, phân công. Chờ phê duyệt → Đã phê duyệt → Chờ bàn giao → Đang thực hiện. Phải có ngày bàn giao và bắt đầu thực tế.
+6. **Cập nhật tiến độ:** nhập 0–100% trực tiếp hoặc theo mốc có tổng trọng số 100%. Nhật ký nêu việc đã làm, tiếp theo, khó khăn và đề xuất. Quá hạn mà đổi tiến độ phải có nguyên nhân, biện pháp và dự kiến hoàn thành. Lãnh đạo gia hạn với hạn cũ/mới, lý do, người đề xuất và thời điểm duyệt; giữ nguyên hạn gốc.
+7. **Nghiệm thu:** 100% không tự hoàn thành/nghiệm thu. Nhập ngày hoàn thành rồi chuyển Hoàn thành sửa chữa → Chờ nghiệm thu. Lãnh đạo nhập ngày/kết luận nghiệm thu và kết quả riêng từng hư hỏng, chuyển Đã nghiệm thu → Đã đóng. Sau đó đóng từng hư hỏng.
+8. **Bảo dưỡng/kiểm định:** chu kỳ ngày/giờ/km, checklist, người thực hiện, hạn và mốc đồng hồ. Tạo công việc một lần từ kế hoạch; vẫn phải duyệt/nghiệm thu. Nghiệm thu cập nhật kết quả và chi phí về kế hoạch.
+9. **Cảnh báo:** máy chủ kiểm tra mỗi phút, lưu DB, đánh dấu đọc/xử lý theo tài khoản; hạn công việc, kiểm tra, kiểm định, giờ/km, lâu chưa cập nhật. Mặc định 7/3/1 ngày; cấu hình trên màn hình Cảnh báo hoặc API `/api/v2/settings`. Chưa gửi email khi chưa có dịch vụ.
+10. **Báo cáo:** tìm, lọc đơn vị, người phụ trách, trạng thái và khoảng ngày, sắp xếp/phân trang. Excel xuất toàn bộ dữ liệu lọc; In/PDF in toàn bộ dữ liệu lọc với kỳ, ngày, người lập và chỗ ký. Chọn **Lưu thành PDF** trong hộp thoại in. Lịch/Gantt nằm cuối danh sách công việc khi có ngày bắt đầu và hạn.
 
-Vào **Công trình → Thêm công trình**. Nhập thông tin, ngày dự kiến, hạng mục và trọng số. Sau khi lưu, mở chi tiết để cập nhật khối lượng, khởi công thực tế, trạng thái và ngày hoàn thành/nghiệm thu. Quản trị/lãnh đạo có thể phân công nhiều tài khoản bằng hộp chọn. Tải ảnh hoặc PDF tại phần Hồ sơ; trên điện thoại có lựa chọn chụp ảnh. Tệp chỉ tải được sau khi máy chủ kiểm tra quyền hồ sơ.
+## Nhập Excel
 
-**Ghi nhận bất cập** có nhóm nguyên nhân, mức ảnh hưởng, vị trí/hạng mục, ngày ước tính, đơn vị phối hợp, người phụ trách, giải pháp, hạn xử lý, kết quả và ngày kết thúc. Ảnh minh chứng gắn ở cấp hồ sơ công trình; bản đầu chưa gắn từng tệp vào riêng từng bất cập. Chỉ người phê duyệt xác nhận nguyên nhân.
+Chọn **Nhập Excel → Tải tệp mẫu**, giữ nguyên 10 cột. `Loại` dùng infrastructure hoặc equipment. Nhóm/trạng thái khớp danh mục, người phụ trách dùng ID trên màn hình. Chọn tệp để xem trước và sửa lỗi từng dòng trước khi xác nhận. Ghi cả lô trong một giao dịch; mã trùng bị từ chối. Chỉ hỗ trợ sheet1 với giá trị văn bản/số, không nhận công thức/macro/mẫu đổi cột. Tối đa 1.000 dòng, tệp 10 MB, giải nén 20 MB. Xuất XLSX dùng ô chuỗi, không biến nội dung thành công thức.
 
-### Đề xuất
+## Kiến trúc, dữ liệu và phân quyền
 
-Tạo bản nháp → Gửi đề xuất → người có quyền chuyển sang Khảo sát/thẩm định → điền ý kiến, kết luận khảo sát → Chờ phê duyệt → Duyệt, Yêu cầu bổ sung hoặc Từ chối. Trả lại/từ chối phải có lý do. Đã duyệt thì bấm **Chuyển thành công trình**; hồ sơ gốc giữ nguyên và có liên kết đến công trình mới. Chỉ chuyển một lần.
+- Node.js 24, giao diện JavaScript cùng origin, SQLite WAL trên ổ bền vững, tệp riêng ngoài public. Giữ nền tảng sẵn có để dễ vận hành, chưa chuyển React/PostgreSQL khi chưa có nhu cầu nhiều instance hoặc đo tải. Dữ liệu chính không lưu trong trình duyệt.
+- `server.mjs`: HTTP, phiên, tệp, phân hệ cũ. `operations.mjs`: tài sản và quy trình mới. `xlsx.mjs`: đọc XLSX có giới hạn giải nén. `public/operations.js`: màn hình nghiệp vụ.
+- DB: users, sessions, records, files, audit, settings, catalogs, alerts, alert_receipts, request_keys, operation_settings, migrations. Hồ sơ có kind, version, JSON nghiệp vụ. Quan hệ ID được máy chủ xác minh; chưa chuẩn hóa từng trường thành bảng riêng. `schema.sql` và `migrations/002-operations.sql` mô tả cấu trúc. Migration idempotent tự chạy khi khởi động, thêm users.unit nếu thiếu, không xóa dữ liệu cũ.
+- Hồ sơ cũ nằm ở **Công trình / Đề xuất sửa chữa / Sửa chữa: tổng quan cũ**, không tự chuyển thành tài sản hoặc cộng vào tổng tài sản mới. Xem `README-LEGACY.md`.
+- Quản trị/lãnh đạo có phạm vi toàn hệ thống. Cán bộ kỹ thuật/người phụ trách sửa chữa/manager ghi trong phạm vi. Người phối hợp/người xem chỉ đọc. Tài khoản thường xem hồ sơ tự tạo, được giao chính/phối hợp hoặc thuộc đơn vị được cấp. Hồ sơ con suy đơn vị theo tài sản; công việc theo các tài sản liên quan. Hồ sơ ngoài phạm vi trả 404, tệp trả 403; máy chủ chặn sửa qua API cũ để vượt quy trình mới.
+- Mật khẩu scrypt + salt; cookie HttpOnly/SameSite Strict, Secure khi HTTPS; phiên 12 giờ; kiểm tra Origin; giới hạn thử đăng nhập; CSP; kiểm tra chữ ký JPEG/PNG/WebP/PDF.
+- Cập nhật có version/409; tạo mới có Idempotency-Key và mã duy nhất; audit có người/giờ/trước/sau, không lưu mật khẩu. Có lưu trữ/khôi phục hồ sơ kèm lý do; không xóa hồ sơ trong UI.
+- Nháp biểu mẫu mới nằm trong sessionStorage theo tài khoản, chỉ báo đã lưu sau xác nhận máy chủ. Ảnh chưa được khôi phục trong nháp. Không tự đồng bộ khi có mạng lại.
 
-### Báo cáo, tổng quan
+## Quy tắc thời hạn
 
-Các thẻ chỉ số mở danh sách tương ứng. Bộ lọc chung gồm đơn vị, khu vực, loại, người phụ trách và khoảng **hạn hoàn thành**. Chọn khoảng ngày tuần/tháng mong muốn bằng bộ lọc này; đây chưa phải báo cáo biến động khối lượng theo kỳ. Bảng hỗ trợ tìm tên, mã, địa chỉ, đơn vị; lọc tình trạng và sắp xếp.
+Ngày lịch, Asia/Ho_Chi_Minh. Đến hạn hôm nay là 0 ngày, hôm sau trễ 1 ngày. Không tự trừ thời gian tạm dừng, không cấu hình ngày làm việc. Tiến độ không suy từ thời gian; tổng(progress × weight)/100 khi có mốc, trọng số phải tổng 100. Tỷ lệ đúng hạn = công việc hoàn thành không muộn hơn hạn gốc / công việc có ngày hoàn thành. Gia hạn không xóa trễ theo kế hoạch gốc. Dừng thiết bị chỉ có một khoảng mở tại mỗi thời điểm, thời điểm do máy chủ ghi, tránh cộng trùng.
 
-**Xuất Excel** tạo tệp `.xlsx` thực sự từ danh sách đã lọc, mỗi hạng mục một dòng; nội dung chuỗi không trở thành công thức Excel. **In / PDF** dùng hộp thoại in của trình duyệt, chọn Save as PDF. Gantt hiển thị kế hoạch xanh nhạt và thực tế xanh đậm, cần ngày bắt đầu và hạn. Thông báo trong ứng dụng có đánh dấu đã đọc theo tài khoản/thiết bị, không gửi email/push.
+## Bàn giao
 
-### Ngoại tuyến và xung đột
-
-Sau khi đã mở ứng dụng online, service worker giữ giao diện. Biểu mẫu công trình/đề xuất tự lưu nháp khi nhập và có nút lưu nháp chủ động. Khi mạng trở lại, mở lại biểu mẫu, khôi phục nháp và bấm **Lưu dữ liệu**. Đồng bộ có chủ đích, chưa có hàng đợi tự động nền. Phiên bản cũ không được ghi đè lên phiên bản mới: máy chủ trả 409, giữ nháp và cho mở bản mới để đối chiếu. Người dùng tự hợp nhất nội dung. Không hỗ trợ đăng nhập ngoại tuyến, tải tệp ngoại tuyến hoặc tải toàn bộ danh sách đã lưu khi khởi động lại không có mạng. Không lưu ảnh vào localStorage.
-
-Bản nháp chứa nội dung hồ sơ trên thiết bị; nên dùng thiết bị cá nhân được bảo vệ. Bản đầu chưa có chức năng quản lý/xóa nháp tập trung; nháp tự xóa khi lưu thành công, có thể xóa bằng dữ liệu website trong trình duyệt.
-
-## Sao lưu và khôi phục
-
-1. Dừng máy chủ để dữ liệu và tệp cùng một thời điểm.
-2. Chạy `node backup.mjs`. Chương trình dùng `VACUUM INTO` để tạo bản SQLite nhất quán và sao chép `files/` vào `backups/<thời điểm>/`.
-3. Sao chép thư mục sao lưu ra thiết bị/kho lưu trữ khác; thiết lập lịch hằng ngày bằng Windows Task Scheduler hoặc dịch vụ backup của máy chủ. Mã nguồn không tự đặt lịch hay mã hóa backup.
-4. Để khôi phục: dừng máy chủ; giữ nguyên một bản sao của thư mục data hiện tại; đổi tên thư mục data hiện tại; tạo data mới và sao chép `app.sqlite` cùng `files/` từ cùng một bản backup vào đó. Không trộn tệp `-wal`/`-shm` của bản cũ với bản mới. Chạy lại máy chủ, đăng nhập và kiểm tra hồ sơ/tệp.
-
-Các biến môi trường: `DATA_DIR` (thư mục lưu bền vững), `PORT` (mặc định 3000), `HOST` (mặc định 127.0.0.1), `COOKIE_SECURE=1` (bắt buộc khi online HTTPS), `PUBLIC_ORIGIN` (origin HTTPS khi đứng sau reverse proxy).
-
-## Đưa lên online
-
-Cần máy chủ Node 24 có ổ lưu bền vững, tên miền, HTTPS và reverse proxy (Caddy/Nginx/IIS), firewall, cơ chế vận hành và sao lưu định kỳ. Khởi tạo tài khoản quản trị qua loopback trước khi mở truy cập ngoài. Chạy tiến trình bằng Windows Service hoặc systemd, không phụ thuộc cửa sổ terminal. Gán HOST=0.0.0.0 chỉ trên mạng nội bộ/reverse proxy được kiểm soát; chỉ mở cổng HTTPS ra ngoài. Đặt PUBLIC_ORIGIN theo tên miền và COOKIE_SECURE=1. Reverse proxy cần giới hạn body 15 MB; ứng dụng giới hạn tệp 10 MB và kiểm tra chữ ký JPEG/PNG/WebP/PDF. Trước triển khai diện rộng cần kiểm thử tải, kiểm tra an ninh và cơ chế quét tệp độc hại; chưa có trình quét virus.
-
-SQLite phù hợp bản đầu một máy chủ. Nếu nhiều máy chủ hoặc tải ghi lớn, cần chuyển PostgreSQL và kho tệp dùng chung; không đặt file SQLite trên thư mục mạng hoặc hệ thống đĩa tạm thời. PWA cài trên điện thoại cần HTTPS; localhost chỉ là ngoại lệ khi dùng ngay trên cùng máy. Chưa kiểm chứng việc cài PWA trên thiết bị iOS/Android thực; manifest hiện dùng biểu tượng SVG, có thể cần bổ sung PNG 192/512 và apple-touch-icon theo thiết bị mục tiêu.
-
-## Phạm vi đã làm và còn thiếu
-
-Đã có đăng nhập, bốn vai trò và giới hạn phạm vi phía máy chủ; tổng quan; danh sách/chi tiết; lưu thật; khối lượng nhiều đơn vị và trọng số; bàn giao, thời hạn và lịch sử gia hạn; bất cập; đề xuất và duyệt; chuyển một lần; tải hồ sơ; tìm/lọc/sắp xếp; xuất XLSX; bố cục điện thoại; manifest/service worker; Gantt cơ bản; in PDF qua trình duyệt; nháp trên thiết bị; phát hiện xung đột; thông báo trong ứng dụng; audit và script backup.
-
-Chưa có: PDF tạo ở máy chủ với mẫu báo cáo chuẩn; thống kê biến động theo tuần/tháng; đồng bộ nền tự động và hợp nhất từng trường; bản đồ ghim tương tác (hiện nhập tọa độ); push/email và cấu hình người nhận riêng; quản lý danh mục; sửa/khóa/đặt lại mật khẩu người dùng; tự đổi mật khẩu/MFA/SSO; xóa/khôi phục hồ sơ trong UI; xác minh tệp bằng antivirus; kiểm thử tải và kiểm thử thiết bị thật. Không có dữ liệu mẫu nên không cần xóa mẫu. Nhật ký lưu ảnh chụp trạng thái mỗi lần ghi nhưng UI hiện chỉ xem danh sách thao tác, chưa có giao diện diff toàn bộ lịch sử.
-
-## Giai đoạn ứng dụng di động
-
-Sau khi nghiệm thu PWA và API online, có thể đóng gói bằng Capacitor cho Android/iOS để dùng camera, lưu ngoại tuyến và push phù hợp từng nền tảng. Cần tài khoản Apple Developer/Google Play Console, chứng chỉ ký, chính sách quyền riêng tư, kiểm thử thiết bị, quy trình xét duyệt và phát hành riêng. Không có bản App Store/Google Play trong gói này.
-
-## Kiểm thử
-
-Chạy `node --test tests.mjs`; kiểm thử dùng thư mục tạm, máy chủ cổng 3107, không thay đổi data đang dùng. Chi tiết tại `TEST-RESULTS.md`.
+Xem [DEPLOYMENT.md](DEPLOYMENT.md) cho triển khai, chi phí dự phòng, sao lưu/khôi phục và thông tin còn cần. Xem [TEST-RESULTS.md](TEST-RESULTS.md) cho kiểm thử và giới hạn nghiệm thu. Chưa có HTTPS công khai, chưa kiểm chứng trên mạng di động/mạng Internet khác và chưa phát sinh chi phí dịch vụ.

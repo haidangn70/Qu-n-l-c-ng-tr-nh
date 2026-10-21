@@ -1,0 +1,41 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATA_DIR: /app/data
+      COOKIE_SECURE: "1"
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Cần cấu hình PUBLIC_ORIGIN}
+      SETUP_TOKEN: ${SETUP_TOKEN:?Cần tạo SETUP_TOKEN ngẫu nhiên}
+    volumes:
+      - app-data:/app/data
+      - ./backups:/app/backups
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Cần cấu hình DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:

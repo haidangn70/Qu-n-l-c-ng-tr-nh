@@ -1,0 +1,7 @@
+data
+backups
+.git
+.env
+*.log
+tests.mjs
+demo-data

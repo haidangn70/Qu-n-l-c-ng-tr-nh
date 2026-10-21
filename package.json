@@ -1,1 +1,16 @@
-{"name":"quan-ly-ha-tang","version":"1.0.0","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test tests.mjs","backup":"node backup.mjs"},"engines":{"node":">=24"}}
+{
+  "name": "quan-ly-ha-tang",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests.mjs",
+    "backup": "node backup.mjs",
+    "demo": "node demo.mjs",
+    "build": "node verify-build.mjs"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  }
+}

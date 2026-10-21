@@ -1,3 +1,7 @@
 data/
 backups/
 *.log
+
+.env
+demo-data/
+releases/
