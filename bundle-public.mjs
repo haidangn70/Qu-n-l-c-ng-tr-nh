@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
-const files=['index.html','app.js','operations.js','style.css','manifest.webmanifest','sw.js','icon.svg'];
+const files=['index.html','app.js','operations.js','pwa.js','form-controls.js','style.css','manifest.webmanifest','sw.js','icon.svg','icon-192.png','icon-512.png','icon-maskable-512.png','apple-touch-icon.png','offline.html'];
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 
 export function createPublicBundle(root=import.meta.dirname){

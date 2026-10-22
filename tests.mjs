@@ -158,12 +158,14 @@ test('Build khi chỉ có tệp gốc: phục hồi giao diện, phục vụ HTT
  const fixture=mkdtempSync(join(tmpdir(),'hatang-bundle-'));let app;
  try{
   for(const file of ['package.json','server.mjs','operations.mjs','domain.mjs','xlsx.mjs','verify-build.mjs','bundle-public.mjs','public-bundle.json'])cpSync(join(import.meta.dirname,file),join(fixture,file));
-  const build=spawnSync(process.execPath,['verify-build.mjs'],{cwd:fixture,encoding:'utf8'});assert.equal(build.status,0,build.stderr);assert.match(build.stdout,/phục hồi 7 tệp/);
+  const build=spawnSync(process.execPath,['verify-build.mjs'],{cwd:fixture,encoding:'utf8'});assert.equal(build.status,0,build.stderr);assert.match(build.stdout,/phục hồi 14 tệp/);
   app=spawn(process.execPath,[join(fixture,'server.mjs')],{env:{...process.env,HOST:'127.0.0.1',PORT:'3111',DATA_DIR:join(fixture,'data')},stdio:'pipe'});await new Promise((resolve,reject)=>{app.stdout.once('data',resolve);app.once('error',reject);setTimeout(()=>reject(Error('Hết thời gian khởi động')),10000).unref()});
   const home=await fetch('http://127.0.0.1:3111/');assert.equal(home.status,200);assert.match(await home.text(),/Phần mềm theo dõi/);
-  for(const path of ['/app.js','/operations.js','/style.css','/icon.svg','/manifest.webmanifest','/sw.js'])assert.equal((await fetch('http://127.0.0.1:3111'+path)).status,200,path);
+  for(const path of ['/app.js','/operations.js','/style.css','/icon.svg','/manifest.webmanifest','/sw.js','/pwa.js','/form-controls.js','/offline.html','/icon-192.png','/icon-512.png','/icon-maskable-512.png','/apple-touch-icon.png'])assert.equal((await fetch('http://127.0.0.1:3111'+path)).status,200,path);
   const {restorePublic}=await import('./bundle-public.mjs'),{readFileSync,writeFileSync,existsSync}=await import('node:fs');
   const corrupt=join(fixture,'corrupt');mkdirSync(corrupt);const bundle=JSON.parse(readFileSync(join(fixture,'public-bundle.json'),'utf8'));bundle.assets['icon.svg'].base64=Buffer.from('đã thay đổi').toString('base64');writeFileSync(join(corrupt,'public-bundle.json'),JSON.stringify(bundle));assert.throws(()=>restorePublic(corrupt),/SHA-256/);assert.equal(existsSync(join(corrupt,'public')),false);
  }finally{if(app&&app.exitCode===null){const done=new Promise(resolve=>app.once('exit',resolve));app.kill();await done}rmSync(fixture,{recursive:true,force:true})}
 });
+
+
 

@@ -5,9 +5,9 @@
 2. Hạng mục & khu vực → Khai báo hạng mục: mã duy nhất, tên, khu vực, vị trí cụ thể, đơn vị, thông số, hiện trạng, người phụ trách và người phối hợp. Khu vực tùy chỉnh trong Danh mục & thiết lập. Những người phối hợp được cấp quyền xem hồ sơ liên quan.
 3. Kiểm tra hiện trạng → Tạo phiếu: chọn hạng mục, ngày, người kiểm tra, đánh giá kỹ thuật và kết luận. Đánh giá mới được cập nhật về hạng mục. Có thể đính kèm ảnh trong chi tiết.
 4. Hư hỏng & đề xuất → Báo cáo hư hỏng: mô tả, thời điểm, ưu tiên, hạn, nguyên nhân sơ bộ và đề xuất xử lý. Mở chi tiết để đi qua Mới ghi nhận → Đánh giá → Đề xuất → Phê duyệt. Lãnh đạo phê duyệt, sau đó tạo công việc sửa chữa liên kết hư hỏng.
-5. Công tác sửa chữa → Tạo công trình: chọn hạng mục, nội dung, hạn dự kiến, nhà thầu, phụ trách chính và phối hợp. Có thể lập trực tiếp mà không cần báo cáo hư hỏng trước. Mã, nội dung và kế hoạch có thể điều chỉnh khi hồ sơ chưa khóa.
-6. Sau Chờ phê duyệt → Đã phê duyệt → Chờ bàn giao: mở Cập nhật hồ sơ, nhập ngày bàn giao mặt bằng và ngày thi công thực tế rồi chuyển Đang thực hiện.
-7. Cập nhật thi công hôm nay: nhập ngày, công việc/khối lượng, đơn vị, tiến độ tổng thể %, mô tả, vướng mắc, việc tiếp theo và ảnh hiện trường. Một ngày có thể có nhiều bản ghi cho nhiều nội dung. Khối lượng nhập là phần phát sinh của lần ghi đó, không nhập số lũy kế. Tổng trong chi tiết cộng các bản ghi cùng tên và cùng đơn vị.
+5. Công tác sửa chữa → Khai báo công tác sửa chữa: bấm khu vực rồi bấm Chọn hạng mục này. Nếu chưa có hạng mục, nhập tên, vị trí, đơn vị và hiện trạng ngay tại bước 1; hạng mục sẽ được lưu để dùng lại. Nhập nội dung sửa chữa, hạn dự kiến, nhà thầu, phụ trách chính và phối hợp. Có thể lập trực tiếp mà không cần báo cáo hư hỏng trước. Khi chưa khóa, Cập nhật hồ sơ cho phép chọn lại hạng mục và điều chỉnh nội dung.
+6. Sau Chờ phê duyệt → Đã phê duyệt → Chờ bàn giao: bấm Bàn giao & bắt đầu thi công, nhập ngày bàn giao mặt bằng và ngày thi công thực tế rồi lưu. Công việc chuyển sang Đang thực hiện.
+7. Cập nhật tiến độ & ảnh: nhập ngày, tỷ lệ hoàn thành %, nội dung đã làm, vướng mắc, việc tiếp theo và ảnh. Nếu cần, đánh dấu Ghi thêm khối lượng thi công trong ngày để nhập nội dung, số lượng và đơn vị. Một ngày có thể có nhiều bản ghi. Khối lượng nhập là phần phát sinh của lần ghi đó, không nhập số lũy kế. Tổng trong chi tiết chỉ cộng các bản ghi khối lượng cùng tên và cùng đơn vị; bản ghi chỉ có tiến độ không tạo khối lượng giả.
 8. Ảnh chụp được gắn theo ngày của nhật ký. JPEG/PNG/WebP/PDF tối đa 10 MB/tệp. Có thể thêm ảnh sau từ chi tiết nhật ký. Nếu ảnh lỗi, nhật ký vẫn giữ và màn hình báo để thử lại tệp còn lại. Không bấm tạo thêm nhật ký chỉ để thử lại ảnh.
 9. Khi đạt 100%: cập nhật ngày hoàn thành thực tế rồi chuyển Hoàn thành sửa chữa → Chờ nghiệm thu. Lãnh đạo nhập ngày/kết luận nghiệm thu, kết quả riêng từng hư hỏng liên quan rồi chuyển Đã nghiệm thu → Đã đóng. Đóng hư hỏng theo quy trình nếu công việc xuất phát từ hư hỏng.
 10. Công tác đầu tư mới: Đề xuất đầu tư → Khảo sát hiện trạng → Lập và duyệt dự án → Lựa chọn nhà thầu → Chờ bàn giao → Đang thực hiện → Hoàn thành xây dựng → Chờ nghiệm thu → Đã nghiệm thu → Đã đóng. Cập nhật mặt bằng, khối lượng, ảnh và phân công giống sửa chữa. Có thể chọn khu vực cho công trình hoàn toàn mới chưa có hạng mục sẵn.
@@ -17,4 +17,5 @@
 14. Lưu trữ/khôi phục cần quyền lãnh đạo và lý do, không xóa hồ sơ. Hạng mục ẩn danh mục vẫn giữ dữ liệu. Hồ sơ đã nghiệm thu/đóng được khóa chỉnh sửa theo quy trình.
 
 Bản nháp giữ theo tài khoản trong phiên trình duyệt. Đăng xuất xóa nháp của phiên. Ảnh cần chọn lại sau khi đóng biểu mẫu, không được lưu trong nháp. Khi có lỗi xung đột 409, đóng biểu mẫu và tải lại hồ sơ để đối chiếu; nội dung nháp vẫn giữ. Không tự ghi đè dữ liệu người khác.
+
 

@@ -25,3 +25,4 @@ Build tự khôi phục public/ thiếu từ gói SHA-256. Migration 3 bổ sung
 
 Đã chạy build và kiểm thử tại Windows/Node 24.19.0; kiểm tra trình duyệt trong ứng dụng trên viewport hẹp. Chưa có URL công khai, chưa kiểm chứng mạng Internet ngoài máy, HTTPS Render thực tế, tải đồng thời quy mô lớn hoặc gửi email/SMS. Không tuyên bố đạt nghiệm thu vận hành khi chưa kiểm tra trên hạ tầng triển khai thực tế.
 
+

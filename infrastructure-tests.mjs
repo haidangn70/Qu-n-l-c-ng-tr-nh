@@ -64,6 +64,51 @@ test('V3: tùy chỉnh khu vực cập nhật hồ sơ, ẩn danh mục không x
  await ok('v2/catalogs','PUT',{id:c.id,name:'Khu vực Cầu cảng mở rộng',active:false});assert.equal((await ok('v2/records/'+asset.id)).name,'Cầu cảng kiểm thử');
  await ok('v2/catalogs','POST',{type:'infrastructure',name:'Khu vực người dùng bổ sung'});assert.ok((await ok('v2/catalogs')).catalogs.some(c=>c.name==='Khu vực người dùng bổ sung'));
 });
+test('Biểu mẫu: bổ sung khu vực/hạng mục, gõ thêm hư hỏng và đổi liên kết đầu tư vẫn giữ hồ sơ',async()=>{
+ const group='Khu vực bổ sung trực tiếp từ biểu mẫu';
+ await ok('v2/catalogs','POST',{type:'infrastructure',name:group});
+ const createAsset=async suffix=>ok('v2/records','POST',{kind:'asset',code:'HT-FORM-'+suffix,name:'Hạng mục biểu mẫu '+suffix,assetType:'infrastructure',group,unit:'Phòng Kỹ thuật',location:'Vị trí bổ sung '+suffix,responsibleId:1,operation:'Đang sử dụng',technical:'Tốt'});
+ const first=await createAsset('A'),second=await createAsset('B');
+ let damage=await ok('v2/records','POST',{kind:'damage',code:'HH-FORM',name:'Hư hỏng được gõ bổ sung',assetId:first.id,responsibleId:1,description:'Mô tả ban đầu',component:'Kết cấu',detected:today(),due:offset(8),priority:'Trung bình',proposal:'Khảo sát'});
+ damage=await update(damage,{description:'Mô tả ban đầu. Bổ sung hiện trạng mới.',component:'Kết cấu bê tông và mặt cầu',preliminaryCause:'Nguyên nhân nhập bổ sung',proposal:'Khảo sát; bổ sung phương án sửa chữa',notes:'Ghi chú nhập sau',assetId:second.id});
+ const storedDamage=await ok('v2/records/'+damage.id);assert.equal(storedDamage.component,'Kết cấu bê tông và mặt cầu');assert.match(storedDamage.description,/Bổ sung hiện trạng mới/);assert.equal(storedDamage.assetId,second.id);assert.equal(storedDamage.notes,'Ghi chú nhập sau');
+ let project=await ok('v2/records','POST',{kind:'investment',code:'DT-FORM',name:'Đầu tư đang nhập',group,unit:'Phòng Kỹ thuật',description:'Nội dung giữ nguyên sau khi thêm hạng mục',responsibleId:1,due:offset(20)});
+ const originalDue=project.originalDue;
+ project=await update(project,{assetId:first.id});assert.equal(project.assetId,first.id);
+ project=await update(project,{assetId:second.id});assert.equal(project.assetId,second.id);assert.equal(project.description,'Nội dung giữ nguyên sau khi thêm hạng mục');assert.equal(project.originalDue,originalDue);
+ project=await update(project,{assetId:''});assert.equal(project.assetId,'');assert.equal(project.group,group);
+ assert.equal((await call('v2/records/'+project.id,'PUT',{...project,assetId:999999999})).status,404);
+ assert.equal((await ok('v2/records/'+project.id)).version,project.version,'Liên kết sai không ghi đè hồ sơ');
+});
+test('V3.2: khai báo hạng mục rồi lập sửa chữa, đổi hạng mục và giữ nguyên nội dung',async()=>{
+ const makeAsset=code=>ok('v2/records','POST',{kind:'asset',code,name:'Hạng mục sửa chữa '+code,assetType:'infrastructure',group:'Khu vực kho',unit:'Phòng Kỹ thuật',location:'Kho số 2',responsibleId:1,technical:'Cần theo dõi',operation:'Đang sử dụng'});
+ const first=await makeAsset('HT-SC-32-A'),second=await makeAsset('HT-SC-32-B');
+ let work=await ok('v2/records','POST',{kind:'work',code:'SC-32-LINK',name:'Sửa mái kho',assetId:first.id,description:'Thay tôn mái kho và xử lý dột',responsibleId:1,due:offset(10)});
+ const originalDue=work.originalDue;
+ work=await update(work,{assetId:second.id});assert.equal(work.assetId,second.id);assert.equal(work.description,'Thay tôn mái kho và xử lý dột');assert.equal(work.originalDue,originalDue);
+ assert.equal((await call('v2/records/'+work.id,'PUT',{...work,assetId:''})).status,400,'Không lưu sửa chữa thiếu hạng mục');
+ assert.equal((await call('v2/records/'+work.id,'PUT',{...work,assetId:999999})).status,404,'Không lưu liên kết hạng mục không tồn tại');
+ assert.equal((await ok('v2/records/'+work.id)).version,work.version,'Lỗi liên kết giữ nguyên hồ sơ đang có');
+});
+test('V3.2: cập nhật tiến độ không bắt buộc khối lượng, lưu ảnh đúng nhật ký và kiểm tra dữ liệu',async()=>{
+ const a=await ok('v2/records','POST',{kind:'asset',code:'HT-SC-32-LOG',name:'Cầu cảng nhật ký',assetType:'infrastructure',group:'Khu vực kho',unit:'Phòng Kỹ thuật',location:'Kho 3',responsibleId:1,technical:'Tốt',operation:'Đang sử dụng'});
+ let work=await ok('v2/records','POST',{kind:'work',code:'SC-32-LOG',name:'Theo dõi tiến độ bằng ảnh',assetId:a.id,responsibleId:1,due:offset(4)});
+ for(const status of ['Đã phê duyệt','Chờ bàn giao'])work=await transition(work,status);
+ work=await update(work,{handover:offset(-2),start:offset(-1)});work=await transition(work,'Đang thực hiện');
+ const entry={version:work.version,entryId:crypto.randomUUID(),entryType:'progress',workDate:today(),progress:45,note:'Đã xử lý bề mặt, chuẩn bị thi công lớp phủ',next:'Thi công lớp phủ',issues:'Chờ vật tư bổ sung'};
+ work=await ok(`v2/records/${work.id}/daily`,'POST',entry);
+ assert.equal(work.progress,45);assert.equal(work.dailyLogs.length,1);assert.equal(work.dailyLogs[0].entryType,'progress');assert.equal(work.dailyLogs[0].quantity,undefined);assert.equal(work.dailyLogs[0].unit,undefined);assert.equal(work.dailyLogs[0].issues,entry.issues);
+ assert.equal((await ok(`v2/records/${work.id}/daily`,'POST',entry)).dailyLogs.length,1,'Gửi lại không nhân đôi tiến độ');
+ for(const invalid of [{progress:-1},{progress:101},{progress:''},{progress:null},{note:''},{workDate:offset(1)},{workDate:offset(-3)},{entryType:'khac'},{entryType:'quantity'}])assert.equal((await call(`v2/records/${work.id}/daily`,'POST',{...entry,entryId:crypto.randomUUID(),version:work.version,...invalid})).status,400,JSON.stringify(invalid));
+ assert.equal((await ok('v2/records/'+work.id)).dailyLogs.length,1,'Nhật ký không hợp lệ không thay đổi hồ sơ');
+ const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+ const file=await ok('files','POST',{recordId:work.id,logId:entry.entryId,name:'anh-tien-do-45.png',mime:'image/png',base64:png});
+ const files=await ok('file-list?record='+work.id);assert.equal(files.length,1);assert.equal(files[0].log_id,entry.entryId);
+ const image=await fetch(origin+'/api/files/'+file.id+'?inline=1',{headers:{Cookie:cookie}});assert.equal(image.status,200);assert.equal(image.headers.get('content-type'),'image/png');assert.ok((await image.arrayBuffer()).byteLength>0);
+ assert.equal((await fetch(origin+'/api/files/'+file.id)).status,401,'Ảnh tiến độ cần đăng nhập');
+ work=await ok(`v2/records/${work.id}/daily`,'POST',{...entry,entryId:crypto.randomUUID(),version:work.version,progress:100,note:'Hoàn thành thi công, chờ kiểm tra và nghiệm thu'});
+ assert.equal(work.status,'Đang thực hiện','Tiến độ 100% không tự nghiệm thu');assert.equal(work.dailyLogs.length,2);
+});
 test('V3: khôi phục mật khẩu bằng mã một lần, thu hồi phiên cũ và giữ công trình',async()=>{
  const count=(await ok('v2/records')).length;
  assert.equal((await call('recovery','POST',{username:'admin',password:'new-password-test-123',recoveryToken:'sai-ma'})).status,403);

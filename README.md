@@ -51,7 +51,7 @@ Mỗi máy chủ có cơ sở dữ liệu riêng. Tài khoản ở máy Windows 
 ## Kiểm tra và tự khắc phục lỗi đã biết
 
 ```powershell
-node --test tests.mjs infrastructure-tests.mjs
+node --test tests.mjs infrastructure-tests.mjs pwa-tests.mjs
 node doctor.mjs
 node package-release.mjs
 ```
@@ -60,7 +60,7 @@ node package-release.mjs
 
 Đây là cơ chế khắc phục lỗi xác định, không tự viết lại mã để sửa mọi lỗi. Không tự xóa hoặc dựng lại DB khi DB hỏng. Không tự tải ảnh ở bản nháp khi mất kết nối; cần chọn lại tệp sau khi mở lại biểu mẫu. Nhật ký được lưu trước ảnh: nếu tải ảnh lỗi, thông báo rõ và cho thử lại các tệp còn lại hoặc thêm ảnh sau.
 
-Gói upload nằm trong `releases/ha-tang-cang-v3/`, chỉ có mã nguồn, không chứa DB, ảnh thực, mật khẩu hoặc dữ liệu minh họa. Xem **RENDER.md** để triển khai.
+Gói upload nằm trong `releases/ha-tang-cang-v3.2.0/`, chỉ có mã nguồn, không chứa DB, ảnh thực, mật khẩu hoặc dữ liệu minh họa. Xem **RENDER.md** để triển khai.
 
 ## Minh họa
 
@@ -73,3 +73,20 @@ Node.js 24, SQLite WAL, JavaScript cùng origin, không phụ thuộc thư việ
 API cũ vẫn được giữ để bảo toàn hồ sơ và tương thích; giao diện mới dùng API /api/v2. Nhập Excel cũ vẫn có API nhưng giao diện mới ưu tiên khai báo trực tiếp để đơn giản thao tác. Nguồn tệp: server.mjs, operations.mjs, public/app.js, public/style.css. Xem GUIDE.md, DEPLOYMENT.md, TEST-RESULTS.md.
 
 Trên Windows có thể nhấp đúp CHAY-PHAN-MEM.cmd nếu Node.js 24 đã được cài vào PATH. Các lệnh node ở trên chạy trực tiếp, không cần npm.
+
+
+## Cài lên máy tính và điện thoại (v3.1)
+
+Bấm Cài ứng dụng tại màn hình đăng nhập hoặc thanh công cụ. Windows/Mac: Chrome hoặc Edge; Android: Chrome; iPhone/iPad: Safari → Chia sẻ → Thêm vào Màn hình chính. Các thiết bị dùng cùng URL HTTPS của Render; cần mạng để sử dụng hồ sơ. Xem CAI-DAT.md cho hướng dẫn và giới hạn đầy đủ.
+
+
+
+## Bản sửa biểu mẫu 3.1.1
+
+Đã sửa ô chọn khu vực và hạng mục liên quan bằng danh sách có gõ tìm kiếm, thêm khu vực/hạng mục ngay tại biểu mẫu và giữ nội dung đang nhập. Đầu tư mới cho phép đổi hạng mục liên quan khi chỉnh sửa. Xem SUA-LOI-3.1.1.md. Sau cập nhật, tải lại trang hoặc đóng/mở lại ứng dụng PWA.
+
+
+## Công tác sửa chữa 3.2.0
+
+Chọn khu vực và hạng mục bằng các ô hiển thị ngay trong biểu mẫu; khai báo hạng mục mới tại chỗ khi danh sách trống. Thẻ công việc có tiến độ, ngày thi công, phân công và ảnh. Nút Cập nhật tiến độ & ảnh lưu nhật ký theo ngày, khối lượng là tùy chọn. Xem SUA-CHUA-3.2.md.
+

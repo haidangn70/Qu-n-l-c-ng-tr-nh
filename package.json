@@ -1,11 +1,11 @@
 {
   "name": "quan-ly-ha-tang",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test tests.mjs infrastructure-tests.mjs",
+    "test": "node --test tests.mjs infrastructure-tests.mjs pwa-tests.mjs",
     "backup": "node backup.mjs",
     "demo": "node demo.mjs",
     "build": "node verify-build.mjs",
@@ -18,3 +18,4 @@
     "node": ">=24 <25"
   }
 }
+

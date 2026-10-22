@@ -193,12 +193,16 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    assert(typeof b.entryId==='string'&&/^[a-f0-9-]{16,64}$/.test(b.entryId),'Cần mã nhật ký hợp lệ');
    const existing=(r.dailyLogs||[]).find(x=>x.id===b.entryId);if(existing)return reply(200,r);
    date(b.workDate,'ngày nhật ký');assert(b.workDate&&b.workDate<=today()&&b.workDate>=r.start,'Ngày nhật ký phải từ ngày khởi công đến hôm nay');
-   assert(typeof b.item==='string'&&b.item.trim()&&b.item.length<=300&&typeof b.unit==='string'&&b.unit.trim()&&b.unit.length<=40,'Nhập nội dung và đơn vị khối lượng');
-   assert(Number.isFinite(Number(b.quantity))&&Number(b.quantity)>=0&&b.quantity!=='','Khối lượng phải là số không âm');
+   const entryType=b.entryType||'quantity';assert(['quantity','progress'].includes(entryType),'Loại cập nhật không hợp lệ');
+   if(entryType==='quantity'){
+    assert(typeof b.item==='string'&&b.item.trim()&&b.item.length<=300&&typeof b.unit==='string'&&b.unit.trim()&&b.unit.length<=40,'Nhập nội dung và đơn vị khối lượng');
+    assert(Number.isFinite(Number(b.quantity))&&Number(b.quantity)>=0&&b.quantity!==''&&b.quantity!=null,'Khối lượng phải là số không âm');
+   }
    assert(typeof b.note==='string'&&b.note.trim()&&b.note.length<=10000,'Nhập mô tả công việc trong ngày (tối đa 10.000 ký tự)');
    assert(!(r.steps||[]).length,'Hãy cập nhật tiến độ theo mốc trên hồ sơ này');
-   d.progress=Number(b.progress);d.delayCause=b.delayCause||r.delayCause;d.remedy=b.remedy||r.remedy;d.expectedCompletion=b.expectedCompletion||r.expectedCompletion;
-   d.dailyLogs=[...(r.dailyLogs||[]),{id:b.entryId,workDate:b.workDate,item:b.item.trim(),quantity:Number(b.quantity),unit:b.unit.trim(),note:b.note,next:b.next||'',issues:b.issues||'',progress:d.progress,at:new Date().toISOString(),by:u.id,name:u.name}];
+    assert(b.progress!==''&&b.progress!=null,'Nhập phần trăm tiến độ hoàn thành');
+    d.progress=Number(b.progress);d.delayCause=b.delayCause||r.delayCause;d.remedy=b.remedy||r.remedy;d.expectedCompletion=b.expectedCompletion||r.expectedCompletion;
+   d.dailyLogs=[...(r.dailyLogs||[]),{id:b.entryId,entryType,workDate:b.workDate,item:entryType==='quantity'?b.item.trim():'Cập nhật tiến độ',...(entryType==='quantity'?{quantity:Number(b.quantity),unit:b.unit.trim()}:{}),note:b.note,next:b.next||'',issues:b.issues||'',progress:d.progress,at:new Date().toISOString(),by:u.id,name:u.name}];
   }else if(action==='downtime'){
    assert(method==='POST'&&r.kind==='asset'&&r.assetType==='equipment','Chỉ áp dụng cho thiết bị');const pauses=[...r.downtime];
    if(b.stop){assert(!pauses.some(p=>!p.to),'Thiết bị đã dừng');assert(b.reason?.trim(),'Cần lý do dừng');pauses.push({from:new Date().toISOString(),reason:b.reason,by:u.id});d.operation='Tạm dừng'}else{assert(pauses.length&&!pauses.at(-1).to,'Thiết bị chưa dừng');pauses[pauses.length-1]={...pauses.at(-1),to:new Date().toISOString()};d.operation='Đang sử dụng'}d.downtime=pauses;

@@ -3,7 +3,7 @@
 
 ## 1. Chuẩn bị gói upload
 
-Chạy `node --test tests.mjs infrastructure-tests.mjs`, sau đó `node package-release.mjs`. Mở `releases/ha-tang-cang-v3/` và đưa **nội dung bên trong** lên gốc repository GitHub. Gói không có dữ liệu hay tài khoản thật. Có thể dùng GitHub Desktop để thêm cả các thư mục public/, .github/, migrations/; đảm bảo không bỏ sót tệp ẩn như .node-version và .gitignore.
+Chạy `node --test tests.mjs infrastructure-tests.mjs pwa-tests.mjs`, sau đó `node package-release.mjs`. Mở `releases/ha-tang-cang-v3.2.0/` và đưa **nội dung bên trong** lên gốc repository GitHub. Gói không có dữ liệu hay tài khoản thật. Có thể dùng GitHub Desktop để thêm cả các thư mục public/, .github/, migrations/; đảm bảo không bỏ sót tệp ẩn như .node-version và .gitignore.
 
 Không upload data/, preview-data/, demo-data/, backups/, releases/, .env, .private-login.txt hoặc bất kỳ tệp .sqlite nào. Không dán mật khẩu vào mã nguồn hay README. Nếu dùng Git, .gitignore đã loại các tệp này. Mã nguồn chưa được push hay deploy tự động từ máy này.
 
@@ -42,9 +42,16 @@ Phương án Render Shell: đặt ADMIN_USERNAME và ADMIN_PASSWORD phù hợp t
 
 ## 5. Tự khắc phục và chẩn đoán
 
-`node doctor.mjs` kiểm tra môi trường, tệp và DB. Nếu public/ bị bỏ sót khi upload, build tự phục hồi đủ 7 tệp từ public-bundle.json. Nếu sửa nguồn nhưng chưa cập nhật gói, build báo khác SHA-256: chạy `node bundle-public.mjs` trên bản nguồn đúng rồi upload gói mới. Không sửa/xóa DB để chữa lỗi giao diện.
+`node doctor.mjs` kiểm tra môi trường, tệp và DB. Nếu public/ bị bỏ sót khi upload, build tự phục hồi đủ 14 tệp từ public-bundle.json. Nếu sửa nguồn nhưng chưa cập nhật gói, build báo khác SHA-256: chạy `node bundle-public.mjs` trên bản nguồn đúng rồi upload gói mới. Không sửa/xóa DB để chữa lỗi giao diện.
 
 GitHub Actions đã có kiểm thử backend, dữ liệu bền vững, hai luồng nghiệp vụ và Docker tại PORT=10000. Docker chưa được xác nhận chạy trên tài khoản Render thực tế ở lần bàn giao này.
 
 Tài liệu chính thức đã đối chiếu: [Render Blueprint](https://render.com/docs/blueprint-spec), [Persistent Disk](https://render.com/docs/disks), [Health Check](https://render.com/docs/health-checks), [Node Version](https://render.com/docs/node-version).
+
+
+
+## Cài ứng dụng sau khi deploy v3.1
+
+Mở URL HTTPS Render trên từng thiết bị, chọn Cài ứng dụng. Không dùng địa chỉ 127.0.0.1 của máy Windows trên điện thoại. Nếu dịch vụ đã chạy bản cũ, upload gói mới có 14 tệp public và public-bundle.json mới rồi deploy. Xem CAI-DAT.md.
+
 
