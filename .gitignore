@@ -5,3 +5,8 @@ backups/
 .env
 demo-data/
 releases/
+.private-login.txt
+preview-data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

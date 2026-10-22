@@ -1,15 +1,18 @@
 {
   "name": "quan-ly-ha-tang",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test tests.mjs",
+    "test": "node --test tests.mjs infrastructure-tests.mjs",
     "backup": "node backup.mjs",
     "demo": "node demo.mjs",
     "build": "node verify-build.mjs",
-    "bundle": "node bundle-public.mjs"
+    "bundle": "node bundle-public.mjs",
+    "doctor": "node doctor.mjs",
+    "reset-admin": "node reset-admin.mjs",
+    "release": "node package-release.mjs"
   },
   "engines": {
     "node": ">=24 <25"

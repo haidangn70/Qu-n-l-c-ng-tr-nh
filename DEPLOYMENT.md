@@ -1,64 +1,27 @@
-# Triển khai và vận hành
 
-## Lựa chọn và ngân sách dự phòng
+# Vận hành và bàn giao phiên bản 3
 
-Một VPS 2 vCPU/4 GB RAM, SSD bền vững từ 40 GB, Linux, Docker Compose. Ưu tiên hạ tầng sẵn có của đơn vị; chọn Việt Nam/Singapore nếu cần độ trễ thấp. Một instance app dùng SQLite, không đặt DB trên NFS hoặc ổ tạm. Tăng dung lượng ảnh theo sử dụng thực tế; quy mô lớn/nhiều instance cần chuyển PostgreSQL/kho tệp chung sau đánh giá tải.
+Xem RENDER.md cho hướng dẫn từng bước. Mã nguồn tại máy chưa được đẩy lên GitHub hoặc triển khai Render. Không tạo hoặc mua tài nguyên từ phiên làm việc này.
 
-| Hạng mục | Ngân sách dự phòng |
-|---|---:|
-| VPS | 300.000–700.000 VNĐ/tháng |
-| Tên miền | 300.000–1.000.000 VNĐ/năm |
-| DB/ảnh | Trong dung lượng SSD VPS, mở rộng khi cần |
-| Bản sao ngoài máy chủ | 100.000–300.000 VNĐ/tháng |
-| HTTPS qua Caddy | Không thu phí chứng chỉ |
-| Email | 0 khi chưa bật, chưa tích hợp gửi |
-| Staging thuê riêng | Thêm 300.000–700.000 VNĐ/tháng hoặc máy sẵn có |
+SQLite WAL và ảnh/PDF lưu trong DATA_DIR. Chỉ chạy một instance. Trên Render dùng Persistent Disk tại /var/data với DATA_DIR=/var/data; Blueprint gợi ý máy 0.5c-512mb và disk 1 GB, đều cần chủ tài khoản xem/xác nhận chi phí. Không dùng filesystem tạm của Free cho dữ liệu thật.
 
-Đây là khoản dự phòng riêng, chưa phải báo giá hoặc cam kết mua. Nguồn giá đối chiếu ngày 21/10/2026: [Hetzner Cloud](https://www.hetzner.com/cloud/cost-optimized/), [bảng điều chỉnh giá](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/), [Cloudflare Registrar](https://domains.cloudflare.com/), [giá đuôi tên miền](https://pricing.registrar.cloudflare.com/). Khoảng VNĐ không phải quy đổi trực tiếp từ nguồn. Chủ đầu tư chọn nhà cung cấp, nơi lưu dữ liệu, hóa đơn và tổng chi phí trước khi đặt dịch vụ.
+## Sao lưu
 
-## Thông tin cần cung cấp trước khi online
+Dừng ứng dụng khi sao lưu để DB và ảnh đồng nhất. Chạy `node backup.mjs` với DATA_DIR trỏ đúng dữ liệu. Bản sao nằm ở backups/<thời điểm>/ gồm app.sqlite và files/. Chuyển bản sao định kỳ sang nơi lưu riêng do đơn vị quản lý; chưa cấu hình lịch tự sao lưu hay lưu đám mây bên ngoài.
 
-1. Máy chủ/tài khoản triển khai, SSH/Docker và chính sách nơi lưu dữ liệu.
-2. Tên miền và quyền DNS, người quản lý gia hạn.
-3. Danh sách đơn vị, người dùng, vai trò/phạm vi và quản trị viên nhận bàn giao.
-4. Kho sao lưu độc lập, chính sách lưu giữ/mã hóa và kênh cấp quyền.
-5. Thời gian bảo trì, mục tiêu RPO/RTO. Gợi ý ban đầu RPO 24 giờ, RTO 4 giờ, cần diễn tập xác minh.
-6. Người thử trên điện thoại/mạng di động và mạng Internet thứ hai.
-7. Nếu muốn email: dịch vụ SMTP/API, miền gửi, người nhận, ngân sách; cần bổ sung tích hợp trước khi bật.
+## Khôi phục
 
-Không commit bí mật; bàn giao bằng trình quản lý mật khẩu/kênh an toàn của đơn vị.
+Dừng ứng dụng. Lưu riêng bản dữ liệu hiện tại trước khi thay. Chép app.sqlite và files/ của cùng một bản sao vào thư mục dữ liệu sạch, đặt DATA_DIR đến thư mục đó rồi khởi động. Không chép xen tệp WAL/SHM của DB khác. Kiểm tra /healthz, số hồ sơ và mở ảnh/PDF đã biết. Có thể chạy `node doctor.mjs` để kiểm tra DB. Kiểm thử tự động đã kiểm tra khôi phục từ bản sao sang thư mục sạch.
 
-## Đưa lên máy chủ
+## Tài khoản
 
-1. Sao chép mã nguồn vào `/opt/hatang`, cài Docker/Compose theo quy trình máy chủ.
-2. Sao chép `.env.example` thành `.env`, cấu hình DOMAIN, PUBLIC_ORIGIN và SETUP_TOKEN ngẫu nhiên. Không dùng giá trị mẫu. `.env` đã được gitignore.
-3. Trỏ DNS A/AAAA về IP thật; chỉ để AAAA nếu IPv6 hoạt động. Mở 80/443, không mở app 3000 hoặc DB ra ngoài.
-4. Chạy `docker compose config`, sau đó `docker compose up -d --build`. Caddy cấp HTTPS khi DNS/cổng đúng. App lưu ở volume app-data.
-5. Vào HTTPS, tạo quản trị bằng SETUP_TOKEN; chỉ cài mới mới cho khởi tạo. Không dùng tài khoản demo. Giao mật khẩu qua kênh an toàn và đổi sau nhận bàn giao.
-6. Kiểm tra health, hồ sơ, tệp, quyền, cảnh báo và khởi động lại. Chạy nghiệm thu staging trước production.
+Không có mật khẩu mặc định công khai. Cài mới chọn mật khẩu trên trang khởi tạo hoặc dùng ADMIN_PASSWORD trong Environment. Reset quản trị cũ bằng RECOVERY_TOKEN dùng một lần hoặc `node reset-admin.mjs` tại máy chủ đang lưu DB. Tài khoản local không tự đồng bộ lên Render. Tệp .private-login.txt chỉ dùng tại máy và bị loại khỏi gói triển khai. Đổi mật khẩu trong ứng dụng thu hồi các phiên cũ.
 
-Cấu hình Docker/Caddy chưa được chạy trên máy này vì chưa có Docker. Node.js 24 được kiểm chứng trực tiếp trên Windows. Không tuyên bố đã triển khai HTTPS.
+## Khắc phục lỗi xác định
 
-## Sao lưu tự động
+Build tự khôi phục public/ thiếu từ gói SHA-256. Migration 3 bổ sung đầu tư mới và mặc định cảnh báo 4/1/0 nếu cấu hình cũ còn là 7/3/1. Migration 4 cập nhật các tên khu vực cũ tương đương, ẩn tên cũ khỏi khai báo mới. Không xóa tài sản hoặc hồ sơ thiết bị. Lỗi nội bộ được ghi mã vào log, API trả thông báo và không làm tiến trình dừng vì gửi header hai lần. Healthcheck có truy vấn DB. Không tự sửa DB hỏng hoặc viết lại mã nguồn.
 
-`node backup.mjs` tạo SQLite nhất quán bằng VACUUM INTO và sao chép files vào backups/timestamp. Dừng app trong lúc sao lưu để DB/tệp đồng nhất.
+## Giới hạn kiểm chứng
 
-Docker: tạo thư mục backups cho UID node trong container có quyền ghi. Chạy `APP_DIR=/opt/hatang /bin/sh deploy/backup.sh`; script dừng app, chạy backup container và khởi động app lại qua trap kể cả lỗi. Đưa deploy/hatang-backup.service và .timer vào /etc/systemd/system, đặt đúng đường dẫn, chạy daemon-reload và enable --now timer. Lịch 02:00 giờ Việt Nam, cần kiểm chứng ở staging.
+Đã chạy build và kiểm thử tại Windows/Node 24.19.0; kiểm tra trình duyệt trong ứng dụng trên viewport hẹp. Chưa có URL công khai, chưa kiểm chứng mạng Internet ngoài máy, HTTPS Render thực tế, tải đồng thời quy mô lớn hoặc gửi email/SMS. Không tuyên bố đạt nghiệm thu vận hành khi chưa kiểm tra trên hạ tầng triển khai thực tế.
 
-Chính sách đề nghị: 14 bản ngày, 8 bản tuần, 12 bản tháng. Chưa tự xóa bản cũ: chỉ bật sau khi chọn kho độc lập và xác nhận sao chép thành công. Sao chép ra kho có mã hóa khác máy chủ, theo dõi dung lượng, tuổi backup và mã thoát. Bản sao cùng SSD chưa bảo vệ khỏi mất VPS.
-
-## Phục hồi
-
-1. Dừng app, bảo toàn một bản DB/tệp hiện tại.
-2. Khôi phục app.sqlite và files từ cùng backup vào thư mục sạch, đặt đúng chủ sở hữu. Không trộn WAL/SHM cũ.
-3. Chạy staging với DATA_DIR/hostname/volume tách biệt, không dùng chung volume production.
-4. Chạy PRAGMA integrity_check, đối chiếu số hồ sơ, đăng nhập, mở tệp, kiểm tra audit/cảnh báo.
-5. Ghi thời gian/kết quả rồi mới chuyển production. Diễn tập toàn bộ DB+tệp từ kho ngoài máy chủ còn chờ.
-
-## Cập nhật, rollback và giám sát
-
-Giữ release/image cũ, backup trước nâng cấp. Thử migration trên bản sao staging trước. Khi lỗi, dừng bản mới, giữ dữ liệu lỗi điều tra; quay image cũ và backup trước migration nếu DB không tương thích. Đối chiếu dữ liệu phát sinh sau backup trước quyết định phục hồi; không chỉ đổi image khi DB không tương thích.
-
-Health `/healthz` kiểm tra DB, không lộ nghiệp vụ. Compose có restart policy, healthcheck và xoay log. Cần cấu hình monitor ngoài máy chủ cho HTTPS/health, miền, SSD, tuổi backup và lỗi tác vụ. Audit nghiệp vụ tách log lỗi vận hành.
-
-Nghiệm thu staging: quyền URL/API/tệp, người xem không ghi, khóa thu hồi phiên, xung đột 409, 100% chưa nghiệm thu, gia hạn giữ gốc, cảnh báo khi đóng trình duyệt, dữ liệu sau restart, nhập lỗi không ghi một phần, báo cáo khớp lọc, chụp ảnh thật, truy cập 4G/5G và Internet thứ hai. Các kiểm tra mạng ngoài còn chờ tên miền/HTTPS.

@@ -1,27 +1,50 @@
-# Sửa triển khai Render
 
-## Bản sửa tự kiểm tra và khôi phục giao diện
+# Đưa phiên bản 3 lên GitHub và Render
 
-Đã kiểm tra trực tiếp repository trên GitHub: tại commit 70bd7ba, danh sách tệp ở gốc không có public/, deploy/ hoặc migrations/. Dockerfile cũ COPY public vì vậy thất bại trước khi chạy Node.
+## 1. Chuẩn bị gói upload
 
-Dockerfile mới dùng `bundle-public.mjs` và `public-bundle.json` ở gốc để dựng public/ trong image, sau đó chạy verify-build. Build native cũng tự khôi phục các tệp public còn thiếu. Gói có SHA-256 từng tệp; dữ liệu sai hoặc không khớp nguồn làm build thất bại, không thay thế âm thầm. Sau mỗi lần sửa giao diện, chạy `node bundle-public.mjs` trước khi commit. Cần upload cả hai tệp đóng gói và Dockerfile/verify-build mới. Đây là gói tài nguyên giao diện, không chứa tài khoản hoặc dữ liệu nghiệp vụ.
+Chạy `node --test tests.mjs infrastructure-tests.mjs`, sau đó `node package-release.mjs`. Mở `releases/ha-tang-cang-v3/` và đưa **nội dung bên trong** lên gốc repository GitHub. Gói không có dữ liệu hay tài khoản thật. Có thể dùng GitHub Desktop để thêm cả các thư mục public/, .github/, migrations/; đảm bảo không bỏ sót tệp ẩn như .node-version và .gitignore.
 
-Healthcheck Docker đã đổi sang PORT của môi trường, hỗ trợ Render cấp cổng 10000. Workflow `.github/workflows/check.yml` đã chuẩn bị: kiểm tra build, toàn bộ test, Docker build và HTTP ở cổng 10000 sau mỗi push/PR; chưa chạy trên GitHub khi chưa có quyền cập nhật repository. Workflow chỉ đọc mã nguồn, không có khóa triển khai hoặc thao tác tự sửa production.
+Không upload data/, preview-data/, demo-data/, backups/, releases/, .env, .private-login.txt hoặc bất kỳ tệp .sqlite nào. Không dán mật khẩu vào mã nguồn hay README. Nếu dùng Git, .gitignore đã loại các tệp này. Mã nguồn chưa được push hay deploy tự động từ máy này.
 
-Trình duyệt kiểm tra hiện chưa đăng nhập GitHub/Render; vì vậy các bản sửa đang ở máy làm việc, chưa push hoặc deploy. Không yêu cầu gửi mật khẩu qua chat. Cần chủ tài khoản đăng nhập trong trình duyệt của Codex để tiếp tục kiểm tra tài khoản và cập nhật.
+## 2. Tạo dịch vụ mới bằng Blueprint
 
-Lỗi ERR_HTTP_HEADERS_SENT trong log là lần ghi header thứ hai khi xử lý lỗi. Bản cũ gửi header 200 trước rồi mới đọc tệp giao diện; nếu tệp thiếu/không đọc được, catch lại gửi JSON và làm tiến trình dừng. Log chưa cho thấy lỗi gốc nên chưa thể kết luận tệp cụ thể nào thiếu.
+Render → New → Blueprint → kết nối repository → chọn render.yaml → xem cấu hình và chi phí trước khi tạo.
 
-Đã sửa: đọc tệp/serialize trước khi gửi header; không gửi lại khi response đã kết thúc; kiểm tra headersSent khi xử lý lỗi; lỗi nội bộ trả 500 và ghi mã lỗi vào log. Khi RENDER=true, mặc định bind 0.0.0.0. Dùng Node 24 đã kiểm chứng, không để khoảng phiên bản mở >=24.
+Blueprint đã khai báo Node.js 24.19.0, build `node verify-build.mjs`, start `node server.mjs`, health `/healthz`, vùng Singapore, một instance, Persistent Disk 1 GB tại /var/data, DATA_DIR=/var/data. Gói máy chủ `0.5c-512mb` và Persistent Disk là tài nguyên trả phí; chủ tài khoản tự xác nhận khi tạo, chưa phát sinh tài nguyên từ công việc tại máy này. Không dùng Free cho lưu hồ sơ và ảnh thật vì không có ổ bền vững.
 
-## Cập nhật repository và cấu hình
+Blueprint yêu cầu nhập **ADMIN_PASSWORD** ít nhất 12 ký tự. **ADMIN_USERNAME=admin**. Có thể mở tệp đăng nhập riêng ở máy, lấy đúng mật khẩu và nhập vào Environment của Render nếu muốn dùng cùng thông tin. Không upload tệp mật khẩu. SETUP_TOKEN và RECOVERY_TOKEN được Render tạo ngẫu nhiên. Sau deploy, mở URL của dịch vụ và đăng nhập admin/mật khẩu đã nhập.
 
-1. Đưa đầy đủ mã nguồn mới, đặc biệt toàn bộ thư mục **public/** và các module server/operations/domain/xlsx vào GitHub nhánh main. Không đưa data/, demo-data/, .env hoặc mật khẩu lên GitHub. Máy làm việc hiện chưa cấu hình Git remote nên chưa push bản sửa tự động.
-2. Render Settings: Build Command = `node verify-build.mjs`; Start Command = `node server.mjs`; Health Check Path = `/healthz`. Build sẽ báo chính xác tệp thiếu trước khi deploy.
-3. Environment: `NODE_VERSION=24.19.0`, `HOST=0.0.0.0`, `COOKIE_SECURE=1`, `PUBLIC_ORIGIN=https://<tên-dịch-vụ>.onrender.com`, `SETUP_TOKEN=<chuỗi-ngẫu-nhiên-do-bạn-tạo>`.
-4. Giữ PORT do Render cấp (log hiện 10000), không cần đặt lại. NODE_VERSION trên dashboard có ưu tiên cao hơn .node-version và package.json, phải sửa nếu hiện là 26.
-5. Dữ liệu thật cần Persistent Disk đã được chủ đầu tư lựa chọn, mount `/var/data`; đặt `DATA_DIR=/var/data`. Không tự đặt mua dịch vụ. Nếu chưa có disk, chỉ thử nghiệm với dữ liệu dùng một lần vì ổ mặc định không giữ DB/tệp sau restart/redeploy.
-6. Sau khi cập nhật GitHub và lưu cấu hình, chọn Manual Deploy → Deploy latest commit. Nếu vẫn dùng Node 26, kiểm tra NODE_VERSION rồi chọn Clear build cache & deploy.
-7. Xác nhận log bind 0.0.0.0:10000, health thành công, trang đăng nhập tải được và tệp JS/CSS không bị 404/500. Cài DB mới cần tự tạo quản trị; tài khoản trên máy Windows không tự chuyển lên Render. Không upload DB thật lên repository để chuyển tài khoản.
+Auto Deploy là `checksPass`: chờ GitHub Actions kiểm thử xong trước khi Render tự deploy. Nếu chưa bật Actions, có thể Manual Deploy sau khi đã chạy kiểm thử tại máy.
 
-Tài liệu nguồn: [Port binding](https://render.com/docs/web-services#port-binding), [Node version và độ ưu tiên](https://render.com/docs/node-version), [Persistent disks](https://render.com/docs/disks). Chưa kiểm chứng bản sửa trên tài khoản Render thực tế.
+## 3. Cập nhật dịch vụ Render đang có
+
+Giữ DATA_DIR và Persistent Disk hiện có để không mất dữ liệu. Sao lưu DB và thư mục files/ trước nâng cấp. Cập nhật đủ mã nguồn ở repository, kiểm tra Build Command/Start Command/Health Check và NODE_VERSION=24.19.0 trong Environment. Biến NODE_VERSION trên dashboard có thể ghi đè .node-version. Chọn Manual Deploy → Deploy latest commit. Nếu Node vẫn sai, kiểm tra biến môi trường rồi Clear build cache & deploy.
+
+Đặt COOKIE_SECURE=1. Trên Render, ứng dụng nhận HTTPS phía proxy, đồng thời lắng nghe 0.0.0.0 với PORT do Render cấp. PUBLIC_ORIGIN có thể đặt bằng URL HTTPS chính xác của ứng dụng nếu dùng domain riêng. Không đặt lại PORT khi Render đang cấp cổng.
+
+ADMIN_PASSWORD chỉ tạo tài khoản trên DB trống, không thay mật khẩu của DB cũ. Để đặt lại quản trị có sẵn:
+
+1. Environment: đặt RECOVERY_TOKEN thành chuỗi ngẫu nhiên riêng ít nhất 24 ký tự rồi lưu/khởi động lại dịch vụ.
+2. Trang đăng nhập → Quên mật khẩu quản trị? → nhập username quản trị đang có, mật khẩu mới và RECOVERY_TOKEN.
+3. Đăng nhập bằng mật khẩu mới. Mã khôi phục vừa dùng bị vô hiệu trong DB; nếu cần lần khác, tạo RECOVERY_TOKEN mới trên Render.
+
+Phương án Render Shell: đặt ADMIN_USERNAME và ADMIN_PASSWORD phù hợp trong Environment, chạy `node reset-admin.mjs`. Lệnh sao lưu DB trước, thu hồi phiên cũ, không xóa công trình và ảnh. Không tải .private-login.txt lên GitHub.
+
+## 4. Xác nhận sau triển khai
+
+- Log có dòng Ứng dụng: http://0.0.0.0:<PORT>; /healthz trả ok:true.
+- Trang đăng nhập có nền vàng cam và hình cảng; không còn mục Phương tiện thiết bị.
+- Đăng nhập, khai báo một hạng mục, tạo sửa chữa và đầu tư mới, gán người phối hợp.
+- Đi qua phê duyệt, nhập ngày bàn giao và thi công, cập nhật khối lượng theo ngày và một ảnh hiện trường.
+- Tạo công việc hạn sau 4 ngày để xem cảnh báo. Chọn Xuất Excel và In/Lưu PDF để kiểm tra báo cáo.
+- Restart hoặc deploy lại; xác nhận hồ sơ và ảnh còn nguyên. Nếu mất, kiểm tra Persistent Disk và DATA_DIR ngay.
+
+## 5. Tự khắc phục và chẩn đoán
+
+`node doctor.mjs` kiểm tra môi trường, tệp và DB. Nếu public/ bị bỏ sót khi upload, build tự phục hồi đủ 7 tệp từ public-bundle.json. Nếu sửa nguồn nhưng chưa cập nhật gói, build báo khác SHA-256: chạy `node bundle-public.mjs` trên bản nguồn đúng rồi upload gói mới. Không sửa/xóa DB để chữa lỗi giao diện.
+
+GitHub Actions đã có kiểm thử backend, dữ liệu bền vững, hai luồng nghiệp vụ và Docker tại PORT=10000. Docker chưa được xác nhận chạy trên tài khoản Render thực tế ở lần bàn giao này.
+
+Tài liệu chính thức đã đối chiếu: [Render Blueprint](https://render.com/docs/blueprint-spec), [Persistent Disk](https://render.com/docs/disks), [Health Check](https://render.com/docs/health-checks), [Node Version](https://render.com/docs/node-version).
+

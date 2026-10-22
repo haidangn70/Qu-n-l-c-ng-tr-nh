@@ -57,7 +57,7 @@ test('Tài sản → nhiều phiếu/hư hỏng → phê duyệt → sửa chữ
  const create=async data=>{const out=await call('records','POST',data);assert.equal(out.status,201,JSON.stringify(out.data));return out.data};
  const update=async(r,changes={})=>{const out=await call('records/'+r.id,'PUT',{...r,...changes});assert.equal(out.status,200,JSON.stringify(out.data));return out.data};
  const transition=async(r,status)=>{const out=await call(`records/${r.id}/transition`,'POST',{version:r.version,status});assert.equal(out.status,200,JSON.stringify(out.data));return out.data};
- const catalogs=(await call('catalogs')).data.catalogs;assert.equal(catalogs.filter(c=>c.type==='infrastructure').length,10);assert.equal(catalogs.filter(c=>c.type==='equipment').length,6);
+ const catalogs=(await call('catalogs')).data.catalogs;assert.equal(catalogs.filter(c=>c.type==='infrastructure').length,9);assert.equal(catalogs.filter(c=>c.type==='equipment').length,6);
  let asset=await create({kind:'asset',code:'TB-001',name:'Cần trục thử',assetType:'equipment',group:'Cần trục giàn QC',unit:'Đơn vị A',location:'Cầu 1',responsibleId:1,operation:'Đang sử dụng',technical:'Tốt'});
  const duplicate=await call('records','POST',{...asset,code:'TB-001'});assert.equal(duplicate.status,400);
  const idem='same-submit-request-key-123';const a=await call('records','POST',{kind:'inspection',code:'KT-001',name:'Kiểm tra lần 1',assetId:asset.id,inspectionDate:'2026-10-21',inspector:'Kỹ thuật',conclusion:'Phát hiện hai hư hỏng'},adminCookie,idem);assert.equal(a.status,201);assert.equal((await call('records','POST',{},adminCookie,idem)).status,400);
@@ -103,7 +103,7 @@ test('XLSX thực: xuất, đọc, xem trước lỗi từng dòng và nhập gi
  const {xlsxDownload}=await import('./public/operations.js');const {readXlsx}=await import('./xlsx.mjs');let blob;
  const originalDocument=globalThis.document,originalCreate=URL.createObjectURL,originalRevoke=URL.revokeObjectURL;
  const make=async rows=>{try{globalThis.document={createElement:()=>({click(){}})};URL.createObjectURL=b=>{blob=b;return 'blob:test'};URL.revokeObjectURL=()=>{};xlsxDownload(rows);return Buffer.from(await blob.arrayBuffer())}finally{globalThis.document=originalDocument;URL.createObjectURL=originalCreate;URL.revokeObjectURL=originalRevoke}};
- const header=['Mã','Tên','Loại','Nhóm','Đơn vị','Khu vực','Vị trí','Vận hành','Kỹ thuật','Người phụ trách (ID)'];const row=['HT-NHAP-001','Tài sản có dấu tiếng Việt','infrastructure','Cầu cảng','Đơn vị A','Khu 1','Cầu 1','Đang sử dụng','Tốt',1];let bytes=await make([header,row]);assert.deepEqual(readXlsx(bytes)[1].slice(0,3),row.slice(0,3));
+ const header=['Mã','Tên','Loại','Nhóm','Đơn vị','Khu vực','Vị trí','Vận hành','Kỹ thuật','Người phụ trách (ID)'];const row=['HT-NHAP-001','Tài sản có dấu tiếng Việt','infrastructure','Khu vực Cầu cảng','Đơn vị A','Khu 1','Cầu 1','Đang sử dụng','Tốt',1];let bytes=await make([header,row]);assert.deepEqual(readXlsx(bytes)[1].slice(0,3),row.slice(0,3));
  let out=await req('v2/import','POST',{base64:bytes.toString('base64')});assert.equal(out.status,200);assert.equal(out.data.preview[0].error,'');assert.equal(out.data.preview[0].row,2);
  assert.equal((await req('v2/import','POST',{base64:bytes.toString('base64'),commit:true})).data.imported,1);
  out=await req('v2/import','POST',{base64:bytes.toString('base64')});assert.match(out.data.preview[0].error,/tồn tại/);
@@ -166,3 +166,4 @@ test('Build khi chỉ có tệp gốc: phục hồi giao diện, phục vụ HTT
   const corrupt=join(fixture,'corrupt');mkdirSync(corrupt);const bundle=JSON.parse(readFileSync(join(fixture,'public-bundle.json'),'utf8'));bundle.assets['icon.svg'].base64=Buffer.from('đã thay đổi').toString('base64');writeFileSync(join(corrupt,'public-bundle.json'),JSON.stringify(bundle));assert.throws(()=>restorePublic(corrupt),/SHA-256/);assert.equal(existsSync(join(corrupt,'public')),false);
  }finally{if(app&&app.exitCode===null){const done=new Promise(resolve=>app.once('exit',resolve));app.kill();await done}rmSync(fixture,{recursive:true,force:true})}
 });
+

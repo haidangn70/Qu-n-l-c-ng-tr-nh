@@ -2,11 +2,12 @@ import {randomBytes} from 'node:crypto';
 import {today,days} from './domain.mjs';
 import {readXlsx} from './xlsx.mjs';
 
-export const infrastructure=['Cầu cảng','Nhà văn phòng','Khu vực bãi','Khu vực nhà xưởng sửa chữa','Khu vực xử lý nước thải','Kho','Cổng ra vào','Hệ thống thoát nước','Hệ thống cấp nước','Khu vực khác'];
+export const infrastructure=['Khu vực Cầu cảng','Khu vực đường bãi xếp hàng','Nhà văn phòng','Khu vực cổng cảng','Khu vực kho','Khu vực nhà xưởng sửa chữa','Khu vực bãi roro','Nạo vét khu nước trước bến, luồng hàng hải','Khu vực khác'];
 export const equipment=['Cần trục giàn QC','Cần trục chân đế Tukan','Cần trục giàn RTG','Xe nâng container RS','Xe nâng hàng FL','Ô tô vận chuyển'];
-export const flows={damage:['Mới ghi nhận','Đánh giá','Đề xuất','Phê duyệt','Lập công việc','Thực hiện','Nghiệm thu','Đóng hư hỏng'],work:['Chờ phê duyệt','Đã phê duyệt','Chờ bàn giao','Đang thực hiện','Hoàn thành sửa chữa','Chờ nghiệm thu','Đã nghiệm thu','Đã đóng']};
+export const flows={damage:['Mới ghi nhận','Đánh giá','Đề xuất','Phê duyệt','Lập công việc','Thực hiện','Nghiệm thu','Đóng hư hỏng'],work:['Chờ phê duyệt','Đã phê duyệt','Chờ bàn giao','Đang thực hiện','Hoàn thành sửa chữa','Chờ nghiệm thu','Đã nghiệm thu','Đã đóng'],investment:['Đề xuất đầu tư','Khảo sát hiện trạng','Lập và duyệt dự án','Lựa chọn nhà thầu','Chờ bàn giao','Đang thực hiện','Hoàn thành xây dựng','Chờ nghiệm thu','Đã nghiệm thu','Đã đóng']};
 const operation=['Đang sử dụng','Hạn chế sử dụng','Tạm dừng','Ngừng sử dụng'],technical=['Tốt','Cần theo dõi','Hư hỏng nhẹ','Hư hỏng nặng','Nguy cơ mất an toàn'];
-const kinds=['asset','inspection','damage','work','maintenance'];
+const kinds=['asset','inspection','damage','work','investment','maintenance'];
+const project=k=>['work','investment'].includes(k);
 export function installOperations({db,assert,body,record,allowed,audit,hash,publicUser}){
  if(!db.prepare('PRAGMA table_info(users)').all().some(c=>c.name==='unit'))db.exec("ALTER TABLE users ADD COLUMN unit TEXT NOT NULL DEFAULT ''");
  db.exec(`CREATE TABLE IF NOT EXISTS migrations(version INTEGER PRIMARY KEY,applied TEXT NOT NULL);
@@ -19,7 +20,20 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
  CREATE UNIQUE INDEX IF NOT EXISTS unique_operations_code ON records(json_extract(data,'$.code')) WHERE kind IN ('asset','inspection','damage','work','maintenance');
  INSERT OR IGNORE INTO migrations VALUES(2,datetime('now'));`);
  for(const [type,names] of [['infrastructure',infrastructure],['equipment',equipment],['equipmentGroup',['Tuyến tiền phương','Tuyến hậu phương']]])for(const name of names)db.prepare('INSERT OR IGNORE INTO catalogs(type,name) VALUES(?,?)').run(type,name);
- const all=()=>db.prepare("SELECT id FROM records WHERE kind IN ('asset','inspection','damage','work','maintenance') ORDER BY id DESC").all().map(x=>record(x.id));
+ if(!db.prepare('SELECT version FROM migrations WHERE version=3').get()){
+  db.exec("BEGIN IMMEDIATE; UPDATE operation_settings SET thresholds='[4,1,0]' WHERE thresholds='[7,3,1]'; DROP INDEX IF EXISTS unique_operations_code; CREATE UNIQUE INDEX unique_operations_code ON records(json_extract(data,'$.code')) WHERE kind IN ('asset','inspection','damage','work','investment','maintenance'); INSERT INTO migrations VALUES(3,datetime('now')); COMMIT;");
+ }
+ if(!db.prepare('SELECT version FROM migrations WHERE version=4').get()){
+  const aliases={'Cầu cảng':'Khu vực Cầu cảng','Khu vực bãi':'Khu vực đường bãi xếp hàng','Kho':'Khu vực kho','Cổng ra vào':'Khu vực cổng cảng'};
+  db.exec('BEGIN IMMEDIATE');try{
+   for(const [oldName,newName] of Object.entries(aliases)){
+    db.prepare("UPDATE records SET data=json_set(data,'$.group',?) WHERE kind IN ('asset','work','investment') AND json_extract(data,'$.group')=?").run(newName,oldName);
+    db.prepare("UPDATE catalogs SET active=0 WHERE type='infrastructure' AND name=?").run(oldName);
+   }
+   db.prepare("INSERT INTO migrations VALUES(4,datetime('now'))").run();db.exec('COMMIT');
+  }catch(error){db.exec('ROLLBACK');throw error;}
+ }
+ const all=()=>db.prepare("SELECT id FROM records WHERE kind IN ('asset','inspection','damage','work','investment','maintenance') ORDER BY id DESC").all().map(x=>record(x.id));
  const canApprove=u=>['admin','approver'].includes(u.role);
  const writer=u=>assert(['admin','approver','manager','technician','repairer'].includes(u.role),'Bạn không có quyền chỉnh sửa',403);
  const approve=u=>assert(canApprove(u),'Cần quyền lãnh đạo/phê duyệt',403);
@@ -43,7 +57,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    assert(d.unit&&d.location&&d.responsibleId,'Cần đơn vị, vị trí và người phụ trách');
    assert(operation.includes(d.operation)&&technical.includes(d.technical),'Trạng thái tài sản không hợp lệ');
    if(d.parentId){const p=visible(u,d.parentId,'asset');assert(p.id!==old?.id,'Tài sản không thể là cấp trên của chính nó');let parent=p;const seen=new Set([old?.id]);while(parent){assert(!seen.has(parent.id),'Cấu trúc tài sản tạo vòng lặp');seen.add(parent.id);parent=parent.parentId?record(parent.parentId):null;}}
-  }else if(k!=='work'){visible(u,d.assetId,'asset');}
+  }else if(!project(k)){visible(u,d.assetId,'asset');}
   if(k==='inspection'){assert(d.inspectionDate&&d.conclusion&&d.inspector,'Phiếu kiểm tra cần ngày, người kiểm tra và kết luận');assert(!d.technical||technical.includes(d.technical),'Đánh giá kỹ thuật không hợp lệ');}
   if(k==='damage'){
    assert(d.description&&d.detected&&d.responsibleId&&d.due,'Hư hỏng cần mô tả, ngày phát hiện, người phụ trách và hạn');
@@ -51,13 +65,20 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    if(d.inspectionId){const i=visible(u,d.inspectionId,'inspection');assert(Number(i.assetId)===Number(d.assetId),'Phiếu kiểm tra thuộc tài sản khác');}
    if(!canApprove(u))assert((d.confirmedCause||'')===(old?.confirmedCause||''),'Chỉ người phê duyệt được kết luận nguyên nhân',403);
   }
-  if(k==='work'){
-   assert(Array.isArray(d.damageIds)&&d.damageIds.length,'Chọn ít nhất một hư hỏng đã phê duyệt');
-   for(const id of d.damageIds){const damage=visible(u,id,'damage');assert(['Phê duyệt','Lập công việc','Thực hiện','Nghiệm thu'].includes(damage.status)||damage.status==='Đóng hư hỏng'&&old?.damageIds?.includes(damage.id)&&['Đã nghiệm thu','Đã đóng'].includes(old.status),'Hư hỏng chưa phê duyệt hoặc đã đóng');}
+  if(project(k)){
+   assert(Array.isArray(d.damageIds||[]),'Danh sách hư hỏng không hợp lệ');
+   assert(k==='investment'||d.assetId||(d.damageIds||[]).length,'Chọn hạng mục hạ tầng hoặc hư hỏng đã phê duyệt');
+   if(d.assetId){const asset=visible(u,d.assetId,'asset');assert(asset.assetType==='infrastructure','Công trình phải thuộc hạ tầng');}
+   if(k==='investment')assert(d.assetId||db.prepare("SELECT id FROM catalogs WHERE type='infrastructure' AND name=? AND active=1").get(d.group)||old?.group===d.group,'Chọn khu vực đầu tư');
+   if(k==='investment'&&!d.assetId&&!canApprove(u)&&u.unit)assert(d.unit===u.unit,'Không được chuyển dự án sang đơn vị ngoài phạm vi',403);
+   for(const id of d.damageIds||[]){const damage=visible(u,id,'damage');assert(!d.assetId||Number(damage.assetId)===Number(d.assetId),'Hư hỏng không thuộc hạng mục đã chọn');assert(['Phê duyệt','Lập công việc','Thực hiện','Nghiệm thu'].includes(damage.status)||damage.status==='Đóng hư hỏng'&&old?.damageIds?.includes(damage.id)&&['Đã nghiệm thu','Đã đóng'].includes(old.status),'Hư hỏng chưa phê duyệt hoặc đã đóng');}
    assert(d.responsibleId&&d.due,'Cần người phụ trách và hạn hoàn thành');
    assert(Number.isFinite(Number(d.progress))&&Number(d.progress)>=0&&Number(d.progress)<=100,'Tiến độ phải từ 0 đến 100%');
    assert(!d.completed||d.start&&d.completed>=d.start,'Ngày hoàn thành phải từ ngày bắt đầu');
+   assert(!d.completed||Number(d.progress)===100,'Ngày hoàn thành cần tiến độ 100%');
    assert(!d.accepted||d.completed&&d.accepted>=d.completed,'Ngày nghiệm thu phải từ ngày hoàn thành');
+   assert(!d.due||!d.plannedStart||d.due>=d.plannedStart,'Hạn hoàn thành phải từ ngày dự kiến thi công');
+   assert(!d.start||!d.handover||d.start>=d.handover,'Ngày thi công phải từ ngày bàn giao mặt bằng');
    if(d.steps?.length){assert(d.steps.every(s=>s.name&&Number(s.weight)>=0&&Number(s.progress)>=0&&Number(s.progress)<=100),'Mốc công việc không hợp lệ');assert(Math.abs(d.steps.reduce((s,x)=>s+Number(x.weight),0)-100)<0.0001,'Tổng trọng số phải bằng 100%');
     for(const step of d.steps){for(const key of ['plannedStart','plannedEnd','actualStart','actualEnd'])date(step[key],'mốc '+step.name);assert(!step.plannedEnd||step.plannedStart&&step.plannedEnd>=step.plannedStart,'Lịch kế hoạch mốc không hợp lệ');assert(!step.actualEnd||step.actualStart&&step.actualEnd>=step.actualStart,'Lịch thực hiện mốc không hợp lệ');if(step.quantity!==''&&step.quantity!==undefined){assert(Number(step.quantity)>0&&Number(step.done)>=0&&Number(step.done)<=Number(step.quantity),'Khối lượng mốc ngoài phạm vi kế hoạch');}if(step.responsibleId)assert(db.prepare('SELECT id FROM users WHERE id=? AND active=1').get(Number(step.responsibleId)),'Người phụ trách mốc không hợp lệ');}
     d.progress=Math.round(d.steps.reduce((s,x)=>s+Number(x.weight)*Number(x.progress)/100,0));}
@@ -85,7 +106,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    if(r.archived||r.completed||['Đã đóng','Đóng hư hỏng','Đã hủy','Đã nghiệm thu','Hoàn thành'].includes(r.status))continue;
    const candidates=[['deadline',r.due||r.deadline],...(r.kind==='asset'?[['inspection',r.expiry],['check',r.nextInspection]]:[])];
    for(const [category,due] of candidates){if(!due)continue;const left=days(due,now),level=left<0?'overdue':thresholds.find(t=>left<=t);if(level===undefined)continue;const msg=`${r.code||r.id} · ${r.name}: ${left<0?'quá hạn '+(-left):'còn '+left} ngày (${category==='inspection'?'kiểm định':category==='check'?'kiểm tra':'xử lý'})`;db.prepare('INSERT INTO alerts(record_id,category,due,message,created) VALUES(?,?,?,?,?) ON CONFLICT(record_id,category,due) DO UPDATE SET message=excluded.message').run(r.id,category+'-'+level,due,msg,at);}
-   if(r.kind==='work'&&r.status==='Đang thực hiện'&&days(now,(r.updated||at).slice(0,10))>=settings.stale_days)db.prepare('INSERT OR IGNORE INTO alerts(record_id,category,due,message,created) VALUES(?,?,?,?,?)').run(r.id,'stale',(r.updated||at).slice(0,10),r.name+': chưa cập nhật từ '+settings.stale_days+' ngày',at);
+   if(project(r.kind)&&r.status==='Đang thực hiện'&&days(now,(r.updated||at).slice(0,10))>=settings.stale_days)db.prepare('INSERT OR IGNORE INTO alerts(record_id,category,due,message,created) VALUES(?,?,?,?,?)').run(r.id,'stale',(r.updated||at).slice(0,10),r.name+': chưa cập nhật từ '+settings.stale_days+' ngày',at);
    if(r.kind==='maintenance'&&r.meterDue&&['Giờ','Km'].includes(r.cycleUnit)){const asset=record(r.assetId),meter=Number(asset?.[r.cycleUnit==='Giờ'?'hours':'km']||0);if(meter>=Number(r.meterDue))db.prepare('INSERT OR IGNORE INTO alerts(record_id,category,due,message,created) VALUES(?,?,?,?,?)').run(r.id,'meter',String(r.meterDue),r.name+': đến mốc '+r.meterDue+' '+r.cycleUnit+' (hiện tại '+meter+')',at);}
   }
  }
@@ -108,7 +129,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
   }
   if(route==='catalogs'){
    if(method==='POST'){assert(u.role==='admin','Chỉ quản trị viên',403);const b=await body(req);assert(['infrastructure','equipment','equipmentGroup'].includes(b.type)&&b.name?.trim(),'Danh mục không hợp lệ');db.prepare('INSERT INTO catalogs(type,name) VALUES(?,?)').run(b.type,b.name.trim());audit(u,'catalog-create',null,b)}
-   else if(method==='PUT'){assert(u.role==='admin','Chỉ quản trị viên',403);const b=await body(req);assert(b.name?.trim(),'Nhập tên danh mục');db.prepare('UPDATE catalogs SET name=?,active=? WHERE id=?').run(b.name.trim(),b.active?1:0,b.id);audit(u,'catalog-update',null,b)}else assert(method==='GET','Phương thức không hợp lệ',405);
+   else if(method==='PUT'){assert(u.role==='admin','Chỉ quản trị viên',403);const b=await body(req);assert(b.name?.trim(),'Nhập tên danh mục');const c=db.prepare('SELECT * FROM catalogs WHERE id=?').get(Number(b.id));assert(c,'Không tìm thấy danh mục',404);transaction(()=>{db.prepare('UPDATE catalogs SET name=?,active=? WHERE id=?').run(b.name.trim(),b.active?1:0,c.id);if(c.type==='infrastructure'&&c.name!==b.name.trim()){for(const r of all().filter(r=>['asset','work','investment'].includes(r.kind)&&r.group===c.name)){const d={...r,group:b.name.trim()};db.prepare('UPDATE records SET data=?,version=version+1,updated=? WHERE id=?').run(JSON.stringify(d),new Date().toISOString(),r.id);audit(u,'catalog-rename-record',r.id,{old:c.name,new:b.name.trim()});}}audit(u,'catalog-update',null,b)})}else assert(method==='GET','Phương thức không hợp lệ',405);
    return reply(200,{catalogs:db.prepare('SELECT * FROM catalogs ORDER BY type,id').all(),flows,operation,technical});
   }
   if(route==='users'){
@@ -140,30 +161,44 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    assert(method==='POST','Phương thức không hợp lệ',405);writer(u);const b=await body(req);assert(kinds.includes(b.kind),'Loại hồ sơ không hợp lệ');
    const key=req.headers['idempotency-key'];assert(typeof key==='string'&&key.length>=16&&key.length<=100,'Cần khóa gửi lại hợp lệ');
    const previous=db.prepare('SELECT result_id FROM request_keys WHERE user_id=? AND key=?').get(u.id,key);if(previous)return reply(200,visible(u,previous.result_id));
-   const d={...b,owner:u.id,assignees:[],history:[],extensions:[],logs:[],downtime:[],status:flows[b.kind]?.[0]||(b.kind==='maintenance'?'Chưa thực hiện':'Đã ghi nhận')};
-   for(const field of ['id','version','updated','archived','completed','accepted','handover','results'])delete d[field];
-   if(b.kind==='work'){d.progress=0;d.originalDue=d.due;d.originalStart=d.plannedStart||'';delete d.start;}
+   const d={...b,owner:u.id,assignees:canApprove(u)?(b.assignees||[]):[],history:[],extensions:[],logs:[],dailyLogs:[],downtime:[],status:flows[b.kind]?.[0]||(b.kind==='maintenance'?'Chưa thực hiện':'Đã ghi nhận')};
+   for(const field of ['id','version','updated','archived','completed','accepted','handover','results','_requestKey'])delete d[field];
+   if(project(b.kind)){d.progress=0;d.originalDue=d.due;d.originalStart=d.plannedStart||'';d.damageIds=b.damageIds||[];delete d.start;}
    const result=transaction(()=>{const r=put(u,b.kind,d,null,'create');db.prepare('INSERT INTO request_keys VALUES(?,?,?)').run(u.id,key,r.id);return r});scan();return reply(201,result);
   }
   const match=route.match(/^records\/(\d+)(?:\/(\w+))?$/);assert(match,'Không tìm thấy',404);let r=visible(u,match[1]);assert(kinds.includes(r.kind),'Loại hồ sơ không hỗ trợ');const action=match[2];
   if(method==='GET'&&!action)return reply(200,r);
-  writer(u);assert(!r.archived||action==='archive','Hồ sơ đã lưu trữ',409);const b=await body(req);assert(b.version===r.version,'Hồ sơ đã được cập nhật. Giữ nội dung và tải lại để đối chiếu.',409);
+  writer(u);assert(!r.archived||action==='archive','Hồ sơ đã lưu trữ',409);const b=await body(req);
+  if(action==='daily'&&method==='POST'&&(r.dailyLogs||[]).some(l=>l.id===b.entryId))return reply(200,r);
+  assert(b.version===r.version,'Hồ sơ đã được cập nhật. Giữ nội dung và tải lại để đối chiếu.',409);
   let d={...r};delete d.version;delete d.updated;delete d.id;
   if(action==='transition'){
    assert(method==='POST'&&flows[r.kind],'Không hỗ trợ chuyển trạng thái');assert(typeof b.status==='string'&&b.status.trim(),'Cần chọn trạng thái tiếp theo');assert(!['Đã đóng','Đóng hư hỏng','Đã hủy','Từ chối'].includes(r.status),'Hồ sơ đã kết thúc, không thể chuyển trạng thái');const flow=flows[r.kind],index=flow.indexOf(r.status);
-   if(['Yêu cầu bổ sung','Từ chối','Tạm dừng','Đã hủy'].includes(b.status)){approve(u);assert(b.reason?.trim(),'Cần lý do');assert(!['Đã đóng','Đóng hư hỏng','Đã hủy'].includes(r.status),'Hồ sơ đã kết thúc');assert((r.kind==='damage'&&['Yêu cầu bổ sung','Từ chối'].includes(b.status))||(r.kind==='work'&&['Tạm dừng','Đã hủy'].includes(b.status)),'Trạng thái không phù hợp');d.resumeStatus=r.status;}
+   if(['Yêu cầu bổ sung','Từ chối','Tạm dừng','Đã hủy'].includes(b.status)){approve(u);assert(b.reason?.trim(),'Cần lý do');assert(!['Đã đóng','Đóng hư hỏng','Đã hủy'].includes(r.status),'Hồ sơ đã kết thúc');assert((r.kind==='damage'&&['Yêu cầu bổ sung','Từ chối'].includes(b.status))||(project(r.kind)&&['Tạm dừng','Đã hủy'].includes(b.status)),'Trạng thái không phù hợp');d.resumeStatus=r.status;}
    else{const next=r.resumeStatus&&['Yêu cầu bổ sung','Tạm dừng'].includes(r.status)?r.resumeStatus:flow[index+1];assert(b.status===next,'Chuyển trạng thái không hợp lệ');if(['Phê duyệt','Đã phê duyệt','Đã nghiệm thu','Đã đóng','Đóng hư hỏng'].includes(b.status))approve(u);}
-   if(r.kind==='work'){
+   if(project(r.kind)){
+    if(r.kind==='investment'&&['Lựa chọn nhà thầu','Chờ bàn giao'].includes(b.status))approve(u);
     if(b.status==='Đang thực hiện')assert(r.handover&&r.start,'Cần ngày bàn giao và bắt đầu thực tế');
-    if(b.status==='Hoàn thành sửa chữa')assert(Number(r.progress)===100&&r.completed,'Cần tiến độ 100% và ngày hoàn thành');
-    if(b.status==='Đã nghiệm thu'){assert(r.accepted&&r.acceptanceNote,'Cần ngày và biên bản/kết luận nghiệm thu');for(const id of r.damageIds)assert(r.results?.[id]?.trim(),'Phải xác nhận kết quả riêng từng hư hỏng');}
+    if(['Hoàn thành sửa chữa','Hoàn thành xây dựng'].includes(b.status))assert(Number(r.progress)===100&&r.completed,'Cần tiến độ 100% và ngày hoàn thành');
+    if(b.status==='Đã nghiệm thu'){assert(r.accepted&&r.acceptanceNote,'Cần ngày và biên bản/kết luận nghiệm thu');for(const id of r.damageIds||[])assert(r.results?.[id]?.trim(),'Phải xác nhận kết quả riêng từng hư hỏng');}
    }
    if(r.kind==='damage'&&b.status==='Đóng hư hỏng')assert(all().some(w=>w.kind==='work'&&(w.damageIds||[]).includes(r.id)&&['Đã nghiệm thu','Đã đóng'].includes(w.status)&&w.results?.[r.id]),'Chưa có kết quả sửa chữa đã nghiệm thu');
    d.status=b.status;d.history=[...r.history,stamp(u,b.status,b.reason)];
   }else if(action==='archive'){
    approve(u);assert(method==='POST'&&typeof b.archived==='boolean'&&b.reason?.trim(),'Cần trạng thái lưu trữ và lý do');d.archived=b.archived;d.history=[...r.history,stamp(u,b.archived?'Lưu trữ':'Khôi phục',b.reason)];
   }else if(action==='extend'){
-   approve(u);assert(method==='POST'&&r.kind==='work'&&b.reason?.trim()&&b.due&&b.proposer,'Cần hạn mới, người đề xuất và lý do');date(b.due,'hạn mới');assert(b.due>r.due,'Gia hạn phải sau thời hạn hiện hành');d.due=b.due;d.extensions=[...r.extensions,{old:r.due,new:b.due,reason:b.reason,proposer:b.proposer,approvedBy:u.id,approvedAt:new Date().toISOString()}];
+   approve(u);assert(method==='POST'&&project(r.kind)&&b.reason?.trim()&&b.due&&b.proposer,'Cần hạn mới, người đề xuất và lý do');date(b.due,'hạn mới');assert(b.due>r.due,'Gia hạn phải sau thời hạn hiện hành');d.due=b.due;d.extensions=[...r.extensions,{old:r.due,new:b.due,reason:b.reason,proposer:b.proposer,approvedBy:u.id,approvedAt:new Date().toISOString()}];
+  }else if(action==='daily'){
+   assert(method==='POST'&&project(r.kind)&&r.status==='Đang thực hiện','Chỉ cập nhật nhật ký khi đang thi công');
+   assert(typeof b.entryId==='string'&&/^[a-f0-9-]{16,64}$/.test(b.entryId),'Cần mã nhật ký hợp lệ');
+   const existing=(r.dailyLogs||[]).find(x=>x.id===b.entryId);if(existing)return reply(200,r);
+   date(b.workDate,'ngày nhật ký');assert(b.workDate&&b.workDate<=today()&&b.workDate>=r.start,'Ngày nhật ký phải từ ngày khởi công đến hôm nay');
+   assert(typeof b.item==='string'&&b.item.trim()&&b.item.length<=300&&typeof b.unit==='string'&&b.unit.trim()&&b.unit.length<=40,'Nhập nội dung và đơn vị khối lượng');
+   assert(Number.isFinite(Number(b.quantity))&&Number(b.quantity)>=0&&b.quantity!=='','Khối lượng phải là số không âm');
+   assert(typeof b.note==='string'&&b.note.trim()&&b.note.length<=10000,'Nhập mô tả công việc trong ngày (tối đa 10.000 ký tự)');
+   assert(!(r.steps||[]).length,'Hãy cập nhật tiến độ theo mốc trên hồ sơ này');
+   d.progress=Number(b.progress);d.delayCause=b.delayCause||r.delayCause;d.remedy=b.remedy||r.remedy;d.expectedCompletion=b.expectedCompletion||r.expectedCompletion;
+   d.dailyLogs=[...(r.dailyLogs||[]),{id:b.entryId,workDate:b.workDate,item:b.item.trim(),quantity:Number(b.quantity),unit:b.unit.trim(),note:b.note,next:b.next||'',issues:b.issues||'',progress:d.progress,at:new Date().toISOString(),by:u.id,name:u.name}];
   }else if(action==='downtime'){
    assert(method==='POST'&&r.kind==='asset'&&r.assetType==='equipment','Chỉ áp dụng cho thiết bị');const pauses=[...r.downtime];
    if(b.stop){assert(!pauses.some(p=>!p.to),'Thiết bị đã dừng');assert(b.reason?.trim(),'Cần lý do dừng');pauses.push({from:new Date().toISOString(),reason:b.reason,by:u.id});d.operation='Tạm dừng'}else{assert(pauses.length&&!pauses.at(-1).to,'Thiết bị chưa dừng');pauses[pauses.length-1]={...pauses.at(-1),to:new Date().toISOString()};d.operation='Đang sử dụng'}d.downtime=pauses;
@@ -176,10 +211,10 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    }));
   }else{
    assert(method==='PUT'&&!action,'Phương thức không hợp lệ',405);assert(!r.archived&&!['Đã nghiệm thu','Đã đóng','Đóng hư hỏng','Đã hủy','Từ chối'].includes(r.status),'Hồ sơ đã khóa');
-   const immutable=['id','kind','version','updated','owner','status','history','extensions','downtime','originalDue','originalStart','workId','resumeStatus','archived'];
+   const immutable=['id','kind','version','updated','owner','status','history','extensions','downtime','logs','dailyLogs','originalDue','originalStart','workId','resumeStatus','archived'];
    for(const [key,value] of Object.entries(b))if(!immutable.includes(key))d[key]=value;
    if(!canApprove(u)){d.assignees=r.assignees;assert(!b.archived,'Chỉ lãnh đạo được lưu trữ',403);assert((b.accepted||'')===(r.accepted||'')&&(b.acceptanceNote||'')===(r.acceptanceNote||''),'Chỉ người phê duyệt được nghiệm thu',403);}
-   if(r.kind==='work'){d.due=r.due;d.damageIds=r.damageIds;assert(['Chờ bàn giao','Đang thực hiện','Tạm dừng'].includes(r.status)||Number(d.progress)===Number(r.progress),'Chưa đến bước cập nhật tiến độ');if(b.log?.trim())d.logs=[...r.logs,{at:new Date().toISOString(),by:u.id,text:b.log,progress:d.progress}];delete d.log;}
+   if(project(r.kind)){d.due=r.due;d.damageIds=r.damageIds||[];assert(['Chờ bàn giao','Đang thực hiện','Tạm dừng'].includes(r.status)||Number(d.progress)===Number(r.progress),'Chưa đến bước cập nhật tiến độ');if(b.log?.trim())d.logs=[...r.logs,{at:new Date().toISOString(),by:u.id,text:b.log,progress:d.progress}];delete d.log;}
    if(r.kind==='asset'&&d.technical!==r.technical)d.history=[...r.history,{...stamp(u,d.technical),previous:r.technical}];
   }
   const result=transaction(()=>{const saved=put(u,r.kind,d,r,action||'update');

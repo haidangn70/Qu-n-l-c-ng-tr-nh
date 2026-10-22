@@ -6,3 +6,6 @@ backups
 tests.mjs
 demo-data
 releases
+.private-login.txt
+preview-data
+infrastructure-tests.mjs

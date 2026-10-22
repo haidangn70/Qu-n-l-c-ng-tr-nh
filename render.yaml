@@ -1,0 +1,34 @@
+# Blueprint for a durable single-instance service. Review paid resources before creating.
+services:
+  - type: web
+    name: quan-ly-ha-tang-cang
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    buildCommand: node verify-build.mjs
+    startCommand: node server.mjs
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    disk:
+      name: ha-tang-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: DATA_DIR
+        value: /var/data
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SETUP_TOKEN
+        generateValue: true
+      - key: RECOVERY_TOKEN
+        generateValue: true

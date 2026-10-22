@@ -3,6 +3,7 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DATA_DIR=/app/data
 WORKDIR /app
 COPY --chown=node:node package.json server.mjs operations.mjs domain.mjs xlsx.mjs backup.mjs verify-build.mjs ./
 COPY --chown=node:node bundle-public.mjs public-bundle.json ./
+COPY --chown=node:node reset-admin.mjs doctor.mjs ./
 RUN node verify-build.mjs
 RUN mkdir -p /app/data/files /app/backups && chown -R node:node /app/data /app/backups
 USER node
