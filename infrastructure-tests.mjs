@@ -16,6 +16,36 @@ async function transition(r,status){return ok(`v2/records/${r.id}/transition`,'P
 before(async()=>{child=spawn(process.execPath,['server.mjs'],{cwd:import.meta.dirname,env:{...process.env,HOST:'127.0.0.1',PORT:'3112',DATA_DIR:dir,NODE_ENV:'test',ALERT_INTERVAL_MS:'100',RECOVERY_TOKEN:recoveryToken,ADMIN_PASSWORD:password,ADMIN_USERNAME:'admin',COOKIE_SECURE:'0'},stdio:'pipe'});await new Promise((resolve,reject)=>{let output='';child.stdout.on('data',b=>{output+=b;if(output.includes('Ứng dụng:'))resolve();});child.once('error',reject);child.once('exit',code=>reject(Error('Máy chủ dừng: '+code)));setTimeout(()=>reject(Error('Hết thời gian khởi động')),10000).unref();});cookie=(await call('login','POST',{username:'admin',password})).cookie;assert.ok(cookie);});
 after(async()=>{if(child&&child.exitCode===null){const done=new Promise(resolve=>child.once('exit',resolve));child.kill();await done;}rmSync(dir,{recursive:true,force:true});});
 
+test('Hư hỏng: nhập vị trí trực tiếp, tên phân công tùy chọn và ảnh không cần hạng mục',async()=>{
+ const input={kind:'damage',code:'HH-VI-TRI',name:'Nền gạch nhà điều hành',location:'  Sảnh tầng 1, nhà điều hành 6 tầng  ',description:'Nền gạch bong, nứt tại cửa ra vào',detected:today(),due:offset(4),priority:'Trung bình',responsibleName:'',collaboratorNames:''};
+ let damage=await ok('v2/records','POST',input);
+ assert.equal(damage.assetId,undefined);assert.equal(damage.responsibleId,undefined);assert.equal(damage.location,input.location.trim());assert.equal(damage.responsibleName,'');assert.equal(damage.collaboratorNames,'');assert.equal(damage.owner,1);
+ assert.equal((await ok('v2/records')).find(r=>r.id===damage.id)?.location,input.location.trim());
+ damage=await update(damage,{responsibleName:'  Nguyễn Văn Thanh  ',collaboratorNames:'  Trần Bình, Lê An  ',location:'Hành lang tầng 2, nhà điều hành'});
+ const stored=await ok('v2/records/'+damage.id);assert.equal(stored.responsibleName,'Nguyễn Văn Thanh');assert.equal(stored.collaboratorNames,'Trần Bình, Lê An');assert.equal(stored.location,'Hành lang tầng 2, nhà điều hành');
+ const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+ const file=await ok('files','POST',{recordId:damage.id,name:'hien-truong-hu-hong.png',mime:'image/png',base64:png}),files=await ok('file-list?record='+damage.id);
+ assert.equal(files.length,1);assert.equal(files[0].id,file.id);assert.equal(files[0].log_id,'');
+ const response=await fetch(origin+'/api/files/'+file.id+'?inline=1',{headers:{Cookie:cookie}});assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');assert.ok((await response.arrayBuffer()).byteLength>0);
+ assert.equal((await fetch(origin+'/api/files/'+file.id)).status,401,'Ảnh hiện trường phải đăng nhập');
+ damage=await update(damage,{responsibleName:'',collaboratorNames:''});assert.equal(damage.responsibleName,'');assert.equal(damage.collaboratorNames,'');assert.equal((await ok('file-list?record='+damage.id)).length,1,'Cập nhật hồ sơ giữ ảnh đã lưu');
+ for(const invalid of [{location:''},{location:'   '},{location:null},{location:{}},{location:'x'.repeat(2001)},{responsibleName:null},{responsibleName:'x'.repeat(301)},{collaboratorNames:[]}])assert.equal((await call('v2/records','POST',{...input,code:'HH-INVALID-'+crypto.randomUUID().slice(0,8),...invalid})).status,400,JSON.stringify(invalid));
+});
+
+test('Sửa chữa theo khu vực: tạo và cập nhật tiến độ ngay khi chưa có hạng mục',async()=>{
+ assert.equal((await ok('v2/records')).filter(r=>r.kind==='asset').length,0);
+ const input={kind:'work',code:'SC-KV-TRUC-TIEP',name:'Sửa chữa nhà điều hành',group:'Khu vực kho',unit:'Phòng Kỹ thuật',responsibleId:1,responsibleName:'Anh Thanh',collaboratorNames:'Nguyễn Hải Đăng',plannedStart:offset(-3),start:offset(-2),due:offset(4),progress:45.5,description:'Chống thấm mái và cửa kính'};
+ let work=await ok('v2/records','POST',input);
+ assert.equal(work.assetId,undefined);assert.deepEqual(work.damageIds,[]);assert.equal(work.group,input.group);assert.equal(work.progress,45.5);assert.equal(work.start,input.start);assert.equal(work.status,'Chờ phê duyệt');
+ assert.equal((await ok('v2/records')).find(r=>r.id===work.id)?.progress,45.5,'Công trình không có hạng mục vẫn có trong danh sách');
+ assert.equal((await ok('v2/alerts')).find(a=>a.record_id===work.id)?.category,'deadline-4');
+ work=await update(work,{progress:65,responsibleName:'Phạm Dũng'});assert.equal(work.progress,65);assert.equal(work.status,'Chờ phê duyệt');assert.equal(work.history.at(-1).status,'Cập nhật tiến độ 65%');
+ const stored=await ok('v2/records/'+work.id);assert.equal(stored.progress,65);assert.equal(stored.responsibleName,'Phạm Dũng');assert.equal(stored.originalDue,input.due);
+ for(const invalid of [{group:''},{group:'Khu vực không tồn tại'},{progress:-1},{progress:101},{progress:''},{progress:null},{progress:'không hợp lệ'},{completed:today()}])assert.equal((await call('v2/records','POST',{...input,code:'SC-KV-INVALID-'+crypto.randomUUID().slice(0,8),...invalid})).status,400,JSON.stringify(invalid));
+ assert.equal((await call('v2/records/'+work.id,'PUT',{...work,progress:101})).status,400);assert.equal((await ok('v2/records/'+work.id)).progress,65);
+ const complete=await ok('v2/records','POST',{...input,code:'SC-KV-HOAN-THANH',progress:100,completed:today()});assert.equal(complete.progress,100);assert.equal(complete.completed,today());assert.equal(complete.start,input.start);assert.equal(complete.status,'Chờ phê duyệt','Ghi tiến độ không tự phê duyệt');
+});
+
 test('V3: mặc định khu vực, cảnh báo 4 ngày và tạo quản trị từ môi trường',async()=>{
  assert.equal((await ok('setup')).needed,false);
  const catalogs=(await ok('v2/catalogs')).catalogs.filter(c=>c.type==='infrastructure'&&c.active);
@@ -86,7 +116,7 @@ test('V3.2: khai báo hạng mục rồi lập sửa chữa, đổi hạng mục
  let work=await ok('v2/records','POST',{kind:'work',code:'SC-32-LINK',name:'Sửa mái kho',assetId:first.id,description:'Thay tôn mái kho và xử lý dột',responsibleId:1,due:offset(10)});
  const originalDue=work.originalDue;
  work=await update(work,{assetId:second.id});assert.equal(work.assetId,second.id);assert.equal(work.description,'Thay tôn mái kho và xử lý dột');assert.equal(work.originalDue,originalDue);
- assert.equal((await call('v2/records/'+work.id,'PUT',{...work,assetId:''})).status,400,'Không lưu sửa chữa thiếu hạng mục');
+ assert.equal((await call('v2/records/'+work.id,'PUT',{...work,assetId:''})).status,400,'Không lưu sửa chữa thiếu cả hạng mục và khu vực');
  assert.equal((await call('v2/records/'+work.id,'PUT',{...work,assetId:999999})).status,404,'Không lưu liên kết hạng mục không tồn tại');
  assert.equal((await ok('v2/records/'+work.id)).version,work.version,'Lỗi liên kết giữ nguyên hồ sơ đang có');
 });
@@ -109,6 +139,47 @@ test('V3.2: cập nhật tiến độ không bắt buộc khối lượng, lưu 
  work=await ok(`v2/records/${work.id}/daily`,'POST',{...entry,entryId:crypto.randomUUID(),version:work.version,progress:100,note:'Hoàn thành thi công, chờ kiểm tra và nghiệm thu'});
  assert.equal(work.status,'Đang thực hiện','Tiến độ 100% không tự nghiệm thu');assert.equal(work.dailyLogs.length,2);
 });
+test('Sửa chữa: nhập tên phân công trực tiếp, cập nhật thời gian và tiến độ có lịch sử',async()=>{
+ let work=await ok('v2/records','POST',{kind:'work',code:'SC-THONG-TIN',name:'Công trình theo dõi đơn giản',assetId:asset.id,responsibleId:1,responsibleName:'  Nguyễn Văn An  ',collaboratorNames:'  Trần Bình, Lê Chi  ',plannedStart:offset(-3),due:offset(4)});
+ assert.equal(work.responsibleName,'Nguyễn Văn An');assert.equal(work.collaboratorNames,'Trần Bình, Lê Chi');
+ const originalDue=work.originalDue;
+ for(const status of ['Đã phê duyệt','Chờ bàn giao'])work=await transition(work,status);
+ work=await update(work,{handover:offset(-2),start:offset(-1),progress:25,responsibleName:'Phạm Dũng',collaboratorNames:'Vũ Hà'});
+ assert.equal(work.responsibleName,'Phạm Dũng');assert.equal(work.collaboratorNames,'Vũ Hà');assert.equal(work.progress,25);assert.equal(work.start,offset(-1));
+ assert.equal(work.responsibleId,1,'Nhập tên không đổi tài khoản phân công');assert.equal(work.originalDue,originalDue);
+ assert.equal(work.history.at(-1).status,'Cập nhật tiến độ 25%');assert.equal(work.history.at(-1).reason,'0% → 25%');
+ const stored=await ok('v2/records/'+work.id);assert.equal(stored.responsibleName,'Phạm Dũng');assert.equal(stored.progress,25);
+ for(const invalid of [{responsibleName:null},{responsibleName:'x'.repeat(301)},{collaboratorNames:[]},{collaboratorNames:'x'.repeat(1501)},{progress:101},{start:offset(-3)},{completed:today()}])assert.equal((await call('v2/records/'+work.id,'PUT',{...work,...invalid})).status,400,JSON.stringify(invalid));
+ assert.equal((await ok('v2/records/'+work.id)).version,work.version,'Dữ liệu không hợp lệ giữ nguyên hồ sơ');
+ work=await update(work,{collaboratorNames:''});assert.equal(work.collaboratorNames,'','Cho phép xóa tên phối hợp');
+ work=await update(work,{progress:100,completed:today()});assert.equal(work.completed,today());assert.equal(work.status,'Chờ bàn giao','Cập nhật thông tin không tự phê duyệt hoặc nghiệm thu');
+});
+
+test('Sửa chữa: luôn cảnh báo từ 4 ngày, ngày đến hạn và quá hạn dù đổi mốc chung',async()=>{
+ const original=await ok('v2/settings');
+ try{
+  await ok('v2/settings','PUT',{thresholds:[10,2],staleDays:original.staleDays});
+  for(const [days,category] of [[5,null],[4,'deadline-4'],[3,'deadline-4'],[1,'deadline-1'],[0,'deadline-0'],[-1,'deadline-overdue']]){
+   const work=await ok('v2/records','POST',{kind:'work',code:'SC-CB-'+String(days).replace('-','M'),name:'Cảnh báo sửa chữa '+days,assetId:asset.id,responsibleId:1,due:offset(days)});
+   const notices=(await ok('v2/alerts')).filter(a=>a.record_id===work.id);
+   assert.equal(notices.length,category?1:0,'Mốc '+days+' ngày');if(category)assert.equal(notices[0].category,category);
+  }
+  const project=await ok('v2/records','POST',{kind:'investment',code:'DT-CB-TUY-CHINH',name:'Đầu tư dùng mốc chung',group:'Khu vực kho',responsibleId:1,due:offset(5)});
+  assert.equal((await ok('v2/alerts')).find(a=>a.record_id===project.id)?.category,'deadline-10','Đầu tư vẫn dùng thiết lập riêng');
+ }finally{await ok('v2/settings','PUT',original);}
+});
+
+test('Sửa chữa theo khu vực: giữ phạm vi đơn vị và phân quyền khi tạo công trình',async()=>{
+ const allUsers=await ok('users','POST',{name:'Cán bộ khu vực',username:'area-manager',password,role:'manager'}),manager=allUsers.find(u=>u.username==='area-manager');
+ await ok('v2/users','PUT',{id:manager.id,unit:'Đơn vị A'});
+ const session=(await call('login','POST',{username:'area-manager',password})).cookie;
+ const input={kind:'work',code:'SC-KV-MANAGER',name:'Công trình trong phạm vi đơn vị',group:'Khu vực kho',unit:'Đơn vị A',responsibleId:manager.id,due:offset(8),progress:30};
+ assert.equal((await call('v2/records','POST',{...input,code:'SC-KV-NGOAI-DON-VI',unit:'Đơn vị B'},session)).status,403);
+ const result=await call('v2/records','POST',input,session);assert.equal(result.status,201);assert.equal(result.data.progress,30);
+ const updateResult=await call('v2/records/'+result.data.id,'PUT',{...result.data,progress:55},session);assert.equal(updateResult.status,200);assert.equal(updateResult.data.progress,55);
+ assert.equal((await call('v2/records/'+result.data.id,'GET',undefined,session)).data.progress,55);
+});
+
 test('V3: khôi phục mật khẩu bằng mã một lần, thu hồi phiên cũ và giữ công trình',async()=>{
  const count=(await ok('v2/records')).length;
  assert.equal((await call('recovery','POST',{username:'admin',password:'new-password-test-123',recoveryToken:'sai-ma'})).status,403);

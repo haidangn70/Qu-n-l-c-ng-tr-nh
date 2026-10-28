@@ -29,13 +29,13 @@ node reset-admin.mjs
 - Sửa chữa: lập công việc độc lập cho hạng mục hoặc liên kết hư hỏng đã duyệt; kế hoạch, bàn giao mặt bằng, thi công, ngày hoàn thành, kinh phí, nghiệm thu.
 - Đầu tư mới: đề xuất → khảo sát → lập và duyệt dự án → chọn nhà thầu → bàn giao → thi công → hoàn thành xây dựng → chờ nghiệm thu → nghiệm thu → đóng.
 - Nhật ký: ngày thi công, nội dung khối lượng, số lượng và đơn vị tính, tiến độ tổng thể, việc đã làm, việc tiếp theo, vướng mắc, ảnh/tài liệu gắn đúng nhật ký. Tổng khối lượng được nhóm theo nội dung và đơn vị, không cộng các đơn vị khác nhau. Khối lượng nhập là số phát sinh trong ngày; tiến độ là đánh giá tổng thể, không tự suy ra từ các khối lượng khác đơn vị.
-- Hư hỏng: báo cáo hiện trạng, nguyên nhân sơ bộ, ưu tiên, hạn, phương án, kinh phí; theo dõi phê duyệt và tạo công việc sửa chữa.
+- Hư hỏng: nhập trực tiếp vị trí/địa điểm, hiện trạng, nguyên nhân sơ bộ, ưu tiên, hạn, phương án và kinh phí; hai ô tên phụ trách/phối hợp để trống và nhập bổ sung. Có tải nhiều ảnh hiện trường khi tạo hoặc cập nhật, theo dõi phê duyệt và tạo công việc sửa chữa.
 - Kiểm tra hiện trạng: phiếu riêng từng lần, đánh giá kỹ thuật cập nhật về hạng mục.
 - Báo cáo: lọc khu vực, loại hồ sơ, phụ trách, khoảng ngày; Excel và In/Lưu PDF cho toàn bộ kết quả lọc. Khoảng ngày lọc hạn công trình; với kiểm tra dùng ngày kiểm tra, hư hỏng dùng hạn xử lý. Nhật ký có bộ lọc ngày thi công riêng.
 
 ## Cảnh báo và thời gian
 
-Máy chủ kiểm tra mỗi phút và lưu thông báo trong DB dù trình duyệt đã đóng. Mặc định nhắc trước **4, 1, 0 ngày**, sau đó cảnh báo quá hạn; lãnh đạo có thể điều chỉnh. Nhắc chưa cập nhật sau 7 ngày theo mặc định. Thông báo hiển thị trong ứng dụng; chưa tích hợp email/SMS/thông báo đẩy khi trình duyệt đóng.
+Máy chủ kiểm tra mỗi phút và lưu thông báo trong DB dù trình duyệt đã đóng. Sửa chữa luôn nhắc trước **4, 1, 0 ngày**, sau đó cảnh báo quá hạn. Đầu tư và hồ sơ khác mặc định dùng các mốc này; lãnh đạo có thể điều chỉnh các mốc chung. Nhắc chưa cập nhật sau 7 ngày theo mặc định. Thông báo hiển thị trong ứng dụng; chưa tích hợp email/SMS/thông báo đẩy khi trình duyệt đóng.
 
 Ngày lịch theo Asia/Ho_Chi_Minh. Hôm nay là ngày đến hạn thì còn 0 ngày. Tiến độ 100% không tự nghiệm thu: phải khai báo ngày hoàn thành và đi qua các bước nghiệm thu. Gia hạn giữ hạn gốc và lịch sử người đề xuất, người duyệt, lý do. Thời gian thi công hiển thị số ngày lịch tính cả ngày đầu, không tự trừ tạm dừng.
 
@@ -88,5 +88,5 @@ Bấm Cài ứng dụng tại màn hình đăng nhập hoặc thanh công cụ. 
 
 ## Công tác sửa chữa 3.2.0
 
-Chọn khu vực và hạng mục bằng các ô hiển thị ngay trong biểu mẫu; khai báo hạng mục mới tại chỗ khi danh sách trống. Thẻ công việc có tiến độ, ngày thi công, phân công và ảnh. Nút Cập nhật tiến độ & ảnh lưu nhật ký theo ngày, khối lượng là tùy chọn. Xem SUA-CHUA-3.2.md.
+Biểu mẫu sửa chữa chọn khu vực hạ tầng trực tiếp, không bắt buộc hạng mục liên quan. Nhập và lưu tiến độ 0–100% ngay khi tạo hoặc sửa; mã được sinh tự động. Đã bỏ hai phần Thông tin bổ sung và Hạng mục hạ tầng liên quan. Thẻ công việc có tiến độ, ngày thi công, phân công và ảnh. Nút Cập nhật tiến độ & ảnh lưu nhật ký theo ngày, khối lượng là tùy chọn. Xem SUA-CHUA-3.2.md.
 

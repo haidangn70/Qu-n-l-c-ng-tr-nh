@@ -1,5 +1,23 @@
 # Công tác sửa chữa · phiên bản 3.2.0
 
+## Cập nhật mới nhất ngày 23/10/2026
+
+Biểu mẫu sửa chữa hiện chỉ có thông tin công trình, ô chọn **Khu vực hạ tầng**, Nhà thầu thực hiện, thời gian, tiến độ %, người phụ trách/phối hợp, ghi chú và Vướng mắc phát sinh. Hai ô nhà thầu/vướng mắc có thể sửa bằng Cập nhật thông tin & tiến độ trong quá trình theo dõi; nội dung hiện tại được hiển thị trên thẻ và chi tiết. Đã bỏ hai phần Thông tin bổ sung và Hạng mục hạ tầng liên quan. Không cần khai báo/chọn hạng mục để lưu công trình. Mã được sinh tự động.
+
+Có thể nhập **0–100% ngay khi tạo hoặc chỉnh sửa**, kể cả trước phê duyệt; lưu xong công trình xuất hiện trong danh sách theo khu vực. Tên, thời gian, tiến độ và cảnh báo được lưu trên máy chủ. Các liên kết/dữ liệu bổ sung của hồ sơ cũ được giữ. Khi cần nghiệm thu, ngày và kết luận được nhập ở biểu mẫu xác nhận bước nghiệm thu.
+
+## Lịch sử cập nhật giao diện trước đó ngày 23/10/2026
+
+Mục này hiện có tên **Thông tin công trình sửa chữa và tiến độ**. Bấm **Thêm công trình sửa chữa** để khai báo; bấm **Cập nhật thông tin & tiến độ** ngay trên thẻ để chỉnh sửa.
+
+Biểu mẫu đưa tên công trình, ngày bắt đầu dự kiến, hạn hoàn thành, tiến độ %, tên người phụ trách chính và tên người phối hợp lên trước. Khi sửa có thêm ngày bắt đầu thực tế và ngày hoàn thành thực tế. Tên người có thể nhập trực tiếp, nhiều người phối hợp ngăn cách bằng dấu phẩy. Các tài khoản được phân công để truy cập hồ sơ vẫn có thể chọn ở **Thông tin bổ sung**.
+
+Phần **Hạng mục hạ tầng liên quan** và **Thông tin bổ sung** được thu gọn. Mở ra khi cần chọn hạng mục đã có, sửa mã, nhà thầu, kinh phí hoặc đính kèm ảnh. Theo yêu cầu tiếp theo ngày 23/10, đã bỏ phần khai báo hạng mục mới khỏi biểu mẫu sửa chữa; việc bổ sung hạng mục thực hiện tại Hạng mục & khu vực. Khi thiếu dữ liệu bắt buộc, phần liên quan tự mở để bổ sung.
+
+Cảnh báo sửa chữa luôn bắt đầu trước hạn **4 ngày**, nhắc lại trước **1 ngày**, khi đến hạn và khi quá hạn; thay đổi mốc chung không làm đổi các mốc này của sửa chữa. Hạn đã lưu điều chỉnh bằng **Gia hạn** để giữ hạn gốc và lý do. Công trình mới có tiến độ 0%; việc cập nhật tiến độ vẫn theo bước bàn giao/thi công hiện có. Thay đổi tiến độ trong biểu mẫu được ghi vào lịch sử xử lý.
+
+Phần dưới ghi lại hướng dẫn biểu mẫu trước lần cập nhật này; quy trình bàn giao, nhật ký và nghiệm thu vẫn áp dụng.
+
 Ô chọn cũ có thể trống khi chỉ có danh mục khu vực nhưng chưa có hồ sơ hạng mục cụ thể. Hồ sơ sửa chữa có sẵn còn bị khóa ô chọn hạng mục. Bản này thay ô chọn bằng danh sách khu vực và các dòng hạng mục hiển thị ngay trong biểu mẫu.
 
 ## Khai báo

@@ -32,3 +32,40 @@ Trình duyệt trong Codex, trên các cơ sở dữ liệu minh họa riêng:
 ## Phạm vi chưa xác nhận
 
 Chưa deploy bản này lên GitHub/Render thực tế; chưa chạy Docker tại máy, kiểm thử tải lớn hoặc cài trực tiếp trên Android/iPhone vật lý. Workflow GitHub có sẵn kiểm tra build, tests và Docker/cổng 10000. Tài khoản sử dụng thật không được đặt lại trong lần cập nhật giao diện này.
+# Kiểm tra bổ sung ngày 23/10/2026 · Thông tin công trình sửa chữa và tiến độ
+
+- `node --test tests.mjs infrastructure-tests.mjs pwa-tests.mjs`: **23/23 đạt**.
+- `node verify-build.mjs`: đạt; gói phục hồi giao diện đã cập nhật bằng `node bundle-public.mjs`.
+- Hai kiểm thử mới xác nhận nhập/sửa tên phân công trực tiếp, kiểm tra độ dài/kiểu dữ liệu, cập nhật ngày và tiến độ có lịch sử; cảnh báo tại 4, 3, 1, 0 ngày và quá hạn, chưa cảnh báo khi còn 5 ngày, độc lập với mốc chung đã đổi.
+- Kiểm tra trình duyệt trên cơ sở dữ liệu tạm riêng: tạo công trình bằng biểu mẫu gọn; khi chưa chọn hạng mục, tự mở phần chọn và giữ dữ liệu đã nhập; chọn hạng mục rồi lưu thành công. Cập nhật một công trình đang thi công từ 0% lên 45%, sửa hai tên phân công, lưu và mở lại xác nhận. Thẻ và chi tiết hiển thị đúng dữ liệu, lịch sử ghi 0% → 45%.
+- Máy chủ sử dụng tại cổng 3130 đã khởi động lại, `/healthz` trả `ok: true`. Không thêm hồ sơ kiểm thử vào dữ liệu sử dụng thật.
+
+
+## Bỏ khai báo hạng mục mới khỏi sửa chữa · 23/10/2026
+
+- Đã bỏ nút, các ô nhập, nhánh tạo hạng mục mới và trạng thái nháp liên quan khỏi biểu mẫu sửa chữa; chỉ chọn hạng mục đã có.
+- `node bundle-public.mjs` và `node verify-build.mjs`: đạt.
+- Đã mở lại biểu mẫu trong trình duyệt với bản nháp cũ: giữ thông tin công trình, ngày và tên phân công; phần Hạng mục hạ tầng liên quan chỉ hiển thị khu vực, tìm kiếm và danh sách. Không còn ô bắt buộc của hạng mục mới. Chưa có hạng mục thì hướng dẫn quản lý tại Hạng mục & khu vực. Không tạo dữ liệu thật trong lúc kiểm tra.
+
+## Biểu mẫu sửa chữa theo khu vực và sửa lỗi lưu/tiến độ · 23/10/2026
+
+- Bộ kiểm thử tự động: **25/25 đạt**. Hai kiểm thử mới kiểm tra công trình không có hạng mục, tiến độ ban đầu 45,5%, sửa trước phê duyệt, ngày thực tế, cảnh báo 4 ngày và phạm vi đơn vị. Chặn khu vực trống/sai và tiến độ ngoài 0–100%, rỗng/null/không phải số.
+- Trình duyệt trên DB tạm hoàn toàn trống: nhập tên, chọn Nhà văn phòng, hạn, tiến độ 45%, tên phụ trách/phối hợp; lưu thành công và thẻ xuất hiện. Mở lại sửa lên 65%, lưu thành công, thẻ hiển thị đúng. Không có hạng mục nào trong DB này.
+- Phần mềm sử dụng tại 127.0.0.1:3130 đã nạp lại máy chủ; bản nháp của người dùng được mở lại với dữ liệu đã nhập. Không tạo hồ sơ sử dụng thật trong lúc kiểm tra.
+- Kiểm tra bổ sung trên trình duyệt: tải lại trang vẫn thấy công trình ở 65%; biểu mẫu nghiệm thu riêng nhập ngày/kết luận và chuyển thành Đã nghiệm thu thành công, không cần mở lại Thông tin bổ sung.
+
+## Nhà thầu thực hiện và Vướng mắc phát sinh · 23/10/2026
+
+- Build đạt; bộ kiểm thử hiện có **25/25 đạt**.
+- Trên DB tạm riêng: tạo hồ sơ có nhà thầu A và vướng mắc ban đầu, mở bằng trình duyệt, đổi sang nhà thầu B và bổ sung vướng mắc vật tư, lưu thành công; thẻ hiển thị đúng hai nội dung mới.
+- Đọc lại API xác nhận hai giá trị đã lưu; tiến độ 45%, kinh phí và ghi chú bổ sung của hồ sơ kiểm thử được giữ.
+- Đã tải lại phần mềm sử dụng thật và mở biểu mẫu cập nhật có hai ô mới. Không thay đổi hồ sơ thật trong lúc kiểm tra.
+- Ảnh minh họa dữ liệu kiểm thử: releases/sua-chua-nha-thau-vuong-mac.png.
+
+## Hư hỏng: vị trí trực tiếp, nhập tên và thêm ảnh · 23/10/2026
+
+- `node --test tests.mjs infrastructure-tests.mjs pwa-tests.mjs`: **26/26 đạt**. Build và gói phục hồi giao diện đã cập nhật, đạt.
+- Kiểm thử API mới: tạo báo cáo chỉ có vị trí, không hạng mục, không tài khoản phụ trách; hai tên để trống. Cập nhật/xóa tên và đổi vị trí, lưu/đọc ảnh có xác thực; chặn vị trí rỗng/sai kiểu/quá dài và tên sai kiểu/quá dài. Các kiểm thử liên kết cũ vẫn đạt.
+- Thử trình duyệt với DB tạm trống: tạo báo cáo với hai tên trống; chọn tệp TXT không hỗ trợ, hồ sơ được lưu và thông báo ảnh lỗi. Chọn lại 2 PNG qua hộp chọn tệp và bấm Lưu lần nữa: thành công, chỉ có 1 báo cáo.
+- Mở lại báo cáo: ảnh cũ hiển thị; gõ hai tên và chọn thêm PNG thứ 3; lưu thành công. API xác nhận đúng 1 hồ sơ/3 ảnh, hai tên lưu đúng, không có assetId giả hoặc dữ liệu File trong hồ sơ JSON.
+- Đã khởi động lại máy chủ sử dụng thật tại 3130 và khôi phục bản nháp cũ vào biểu mẫu mới; hai ô tên trống, ô vị trí nhập tự do và phần ảnh hiển thị. Không tự lưu hồ sơ thật.
