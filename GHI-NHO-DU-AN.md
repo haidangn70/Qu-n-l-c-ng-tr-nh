@@ -1,6 +1,32 @@
 # Ghi nhớ dự án · Phần mềm quản lý hạ tầng Cảng
 
-Cập nhật ngày 23/10/2026. Phiên bản đang có: **3.2.0**, đã chỉnh biểu mẫu công trình sửa chữa và Hư hỏng & đề xuất theo các mốc được người dùng chấp nhận.
+Cập nhật ngày 28/10/2026. Phiên bản đang có: **3.2.0**, gồm các chỉnh sửa công trình sửa chữa, Hư hỏng & đề xuất, bỏ mục Nhật ký hiện trường riêng và biểu mẫu Kiểm tra hiện trạng nhập trực tiếp.
+
+## Mốc lưu mới nhất theo yêu cầu của người dùng · 28/10/2026
+
+- Đã lưu phần mềm sau chỉnh Kiểm tra hiện trạng để tiếp tục chỉnh các phần sau. Điểm tiếp tục mới nhất: `DIEM-LUU-KIEM-TRA-HIEN-TRANG-2026-10-28.md`.
+- ZIP nguồn: `releases/Ha-tang-Cang-2026-10-28-Kiem-tra-hien-trang.zip`; thư mục giải nén cùng tên trong `releases/`. Gói gồm toàn bộ mã hiện tại và ghi chú, có danh sách SHA-256 kiểm tra từng tệp.
+- Bản lưu gồm cả việc bỏ mục Nhật ký hiện trường riêng và các chỉnh sửa sửa chữa, hư hỏng trước đó. Giữ các ZIP cũ; không phục hồi bản cũ lên mã hiện tại. Các mục bên dưới mô tả lịch sử từng lần sửa, không thay thế mốc lưu mới nhất này.
+- Build kiểm tra lại khi lưu đạt; bộ kiểm thử sau thay đổi gần nhất **28/28 đạt**. Dữ liệu thật và ảnh đang dùng tiếp tục ở `data/`, không đóng vào gói mã nguồn; chưa triển khai GitHub/Render.
+
+## Cập nhật mới nhất ngày 28/10/2026 · Kiểm tra hiện trạng
+
+- Biểu mẫu tạo/cập nhật dùng ô `assetName` để gõ trực tiếp Hạng mục hạ tầng, không cần khai báo danh mục trước. Phiếu không có `assetId` vẫn xuất hiện trong danh sách, chi tiết và báo cáo. Không tự tạo hạng mục giả hoặc đổi tên danh mục.
+- `inspector` là chuỗi nhiều họ tên, phân cách bằng dấu phẩy hoặc xuống dòng. Tên phân công nhập trực tiếp qua `responsibleName`/`collaboratorNames`; bổ sung `responsibleTitle`/`collaboratorTitles`. Phiếu mới không tự điền tên quản trị. Phiếu cũ đọc tên từ tài khoản khi chưa có trường nhập trực tiếp; liên kết tài khoản/quyền truy cập được giữ riêng, tên tự do không cấp quyền.
+- Chọn nhiều ảnh lúc tạo/sửa, xem trước ảnh mới và xem ảnh đã lưu. Lưu phiếu trước ảnh; thử lại ảnh lỗi không tạo phiếu trùng. JPEG/PNG/WebP/PDF tối đa 10 MB/tệp. Vẫn thêm ảnh được từ Đính kèm trong chi tiết.
+- API kiểm tra kiểu/độ dài, hạng mục bắt buộc, ngày/người kiểm tra/kết luận, liên kết cũ và phạm vi đơn vị. Phiếu liên kết vẫn cập nhật đánh giá kỹ thuật về hạng mục. Không thay đổi cấu trúc SQLite.
+- Đã bổ sung tìm kiếm, lọc tên phụ trách nhập trực tiếp và bốn cột Excel cho hạng mục kiểm tra, người kiểm tra và hai chức danh.
+- Build đạt; **28/28 kiểm thử đạt**. Thử trình duyệt trên DB tạm: tạo phiếu không có hạng mục danh mục với nhiều người/chức danh và hai ảnh; mở lại sửa tên hạng mục/chức danh và thêm ảnh thứ ba; danh sách vẫn có một phiếu. Dữ liệu thử tách khỏi `data/`.
+- Máy chủ sử dụng thật tại `127.0.0.1:3130` đã nạp bản mới. Đã khôi phục bản nháp **Ray cầu tàu**, giữ mã, ngày, người kiểm tra và chuyển tên đã chọn sang hai ô nhập trực tiếp; chưa tự lưu phiếu thật. Chức danh và hạng mục để người dùng bổ sung.
+- Chi tiết lần sửa: `DIEM-LUU-2026-10-28.md`; mốc lưu sau đó: `DIEM-LUU-KIEM-TRA-HIEN-TRANG-2026-10-28.md`. Bản chụp trước sửa và ảnh xác nhận ở `.artifacts/inspection-form-20261028/`. ZIP ngày 23/10 là bản cũ; chưa triển khai GitHub/Render.
+
+## Cập nhật ngày 28/10/2026 · bỏ mục Nhật ký hiện trường
+
+- Theo yêu cầu của người dùng, đã bỏ **Nhật ký hiện trường** khỏi menu, bản đồ tên màn hình và nhánh điều hướng; xóa màn hình tổng hợp riêng, hàm tải ảnh riêng của màn hình và các kiểu giao diện không còn dùng.
+- Giữ nhật ký thi công, cập nhật tiến độ và ảnh trong chi tiết từng công trình sửa chữa/đầu tư; không sửa API, cấu trúc hoặc dữ liệu hiện có. Không diễn giải yêu cầu bỏ mục riêng thành yêu cầu xóa nhật ký đã lưu.
+- Điểm tiếp tục hiện tại: `DIEM-LUU-2026-10-28.md`. Mã đang làm việc đã cập nhật; ZIP ngày 23/10 vẫn là bản cũ và chưa chứa thay đổi này. Chưa triển khai GitHub/Render.
+- Đã cập nhật hướng dẫn và gói giao diện 14 tệp; build đạt, **26/26 kiểm thử đạt**. Trình duyệt thật cổng 3130 xác nhận menu không còn mục Nhật ký hiện trường và các mục còn lại vẫn hiển thị.
+- Bản chụp trước sửa ở `.artifacts/remove-field-journal-20261028/before/`; ảnh xác nhận ở `.artifacts/remove-field-journal-20261028/menu-without-field-journal.png`.
 
 ## Cập nhật ngày 23/10/2026 · trạng thái mới nhất
 

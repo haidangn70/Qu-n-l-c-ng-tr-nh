@@ -28,10 +28,10 @@ node reset-admin.mjs
 - Hạng mục: vị trí, quy mô, kết cấu, đơn vị quản lý, hiện trạng, người phụ trách chính và phối hợp.
 - Sửa chữa: lập công việc độc lập cho hạng mục hoặc liên kết hư hỏng đã duyệt; kế hoạch, bàn giao mặt bằng, thi công, ngày hoàn thành, kinh phí, nghiệm thu.
 - Đầu tư mới: đề xuất → khảo sát → lập và duyệt dự án → chọn nhà thầu → bàn giao → thi công → hoàn thành xây dựng → chờ nghiệm thu → nghiệm thu → đóng.
-- Nhật ký: ngày thi công, nội dung khối lượng, số lượng và đơn vị tính, tiến độ tổng thể, việc đã làm, việc tiếp theo, vướng mắc, ảnh/tài liệu gắn đúng nhật ký. Tổng khối lượng được nhóm theo nội dung và đơn vị, không cộng các đơn vị khác nhau. Khối lượng nhập là số phát sinh trong ngày; tiến độ là đánh giá tổng thể, không tự suy ra từ các khối lượng khác đơn vị.
+- Nhật ký thi công trong chi tiết từng công trình: ngày thi công, nội dung khối lượng, số lượng và đơn vị tính, tiến độ tổng thể, việc đã làm, việc tiếp theo, vướng mắc, ảnh/tài liệu gắn đúng nhật ký. Tổng khối lượng được nhóm theo nội dung và đơn vị, không cộng các đơn vị khác nhau. Khối lượng nhập là số phát sinh trong ngày; tiến độ là đánh giá tổng thể, không tự suy ra từ các khối lượng khác đơn vị.
 - Hư hỏng: nhập trực tiếp vị trí/địa điểm, hiện trạng, nguyên nhân sơ bộ, ưu tiên, hạn, phương án và kinh phí; hai ô tên phụ trách/phối hợp để trống và nhập bổ sung. Có tải nhiều ảnh hiện trường khi tạo hoặc cập nhật, theo dõi phê duyệt và tạo công việc sửa chữa.
-- Kiểm tra hiện trạng: phiếu riêng từng lần, đánh giá kỹ thuật cập nhật về hạng mục.
-- Báo cáo: lọc khu vực, loại hồ sơ, phụ trách, khoảng ngày; Excel và In/Lưu PDF cho toàn bộ kết quả lọc. Khoảng ngày lọc hạn công trình; với kiểm tra dùng ngày kiểm tra, hư hỏng dùng hạn xử lý. Nhật ký có bộ lọc ngày thi công riêng.
+- Kiểm tra hiện trạng: nhập trực tiếp hạng mục, nhiều người kiểm tra, tên và chức danh người phụ trách/phối hợp; chọn nhiều ảnh ngay khi tạo hoặc cập nhật phiếu. Liên kết hạng mục của phiếu cũ được giữ và tiếp tục nhận đánh giá kỹ thuật.
+- Báo cáo: lọc khu vực, loại hồ sơ, phụ trách, khoảng ngày; Excel và In/Lưu PDF cho toàn bộ kết quả lọc. Khoảng ngày lọc hạn công trình; với kiểm tra dùng ngày kiểm tra, hư hỏng dùng hạn xử lý.
 
 ## Cảnh báo và thời gian
 

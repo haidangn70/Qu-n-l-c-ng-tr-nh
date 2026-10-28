@@ -1,7 +1,7 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdtempSync,rmSync} from 'node:fs';
+import {mkdtempSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {today} from './domain.mjs';
@@ -187,4 +187,50 @@ test('V3: khôi phục mật khẩu bằng mã một lần, thu hồi phiên cũ
  assert.equal((await call('me')).status,401);
  assert.equal((await call('recovery','POST',{username:'admin',password:'other-password-123',recoveryToken})).status,403);
  cookie=(await call('login','POST',{username:'admin',password:'new-password-test-123'})).cookie;assert.ok(cookie);assert.equal((await ok('v2/records')).length,count);
+});
+
+test('Kiểm tra hiện trạng: nhập hạng mục, nhiều người, chức danh và ảnh; thử lại không nhân đôi phiếu',async()=>{
+ const assetsBefore=(await ok('v2/records')).filter(r=>r.kind==='asset').length;
+ const input={kind:'inspection',code:'KT-NHAP-TRUC-TIEP',name:'Kiểm tra ray cầu tàu',assetName:'  Ray cầu tàu số 2  ',inspectionDate:today(),inspector:'  Nguyễn Văn An, Trần Thị Bình\nLê Văn Cường  ',technical:'Cần theo dõi',conclusion:'  Theo dõi khe nối ray  ',responsibleName:'  Phạm Văn Dũng  ',responsibleTitle:'  Phó trưởng phòng Kỹ thuật  ',collaboratorNames:'  Trần Thị Mai, Lê Văn Sơn  ',collaboratorTitles:'  Kỹ sư cầu đường, Cán bộ kỹ thuật  '};
+ const key='inspection-attachment-retry-'+crypto.randomUUID();
+ const submit=()=>fetch(origin+'/api/v2/records',{method:'POST',headers:{'Content-Type':'application/json',Cookie:cookie,'Idempotency-Key':key},body:JSON.stringify(input)});
+ let response=await submit();assert.equal(response.status,201);let inspection=await response.json();
+ assert.equal(inspection.assetId,undefined);assert.equal(inspection.responsibleId,undefined);assert.deepEqual(inspection.assignees,[]);
+ assert.equal(inspection.assetName,input.assetName.trim());assert.equal(inspection.inspector,input.inspector.trim());assert.equal(inspection.responsibleName,input.responsibleName.trim());assert.equal(inspection.responsibleTitle,input.responsibleTitle.trim());assert.equal(inspection.collaboratorNames,input.collaboratorNames.trim());assert.equal(inspection.collaboratorTitles,input.collaboratorTitles.trim());assert.equal(inspection.conclusion,input.conclusion.trim());
+ assert.equal((await ok('v2/records')).filter(r=>r.kind==='asset').length,assetsBefore,'Nhập hạng mục trên phiếu không tự tạo hoặc đổi danh mục hạ tầng');
+ assert.equal((await call('files','POST',{recordId:inspection.id,name:'anh-loi.png',mime:'image/png',base64:Buffer.from('khong-phai-anh').toString('base64')})).status,400);
+ response=await submit();assert.equal(response.status,200);assert.equal((await response.json()).id,inspection.id,'Thử lại sau lỗi ảnh giữ đúng một phiếu');
+ const png=readFileSync(new URL('./public/icon-192.png',import.meta.url)).toString('base64');
+ for(const name of ['anh-hien-trang-1.png','anh-hien-trang-2.png'])await ok('files','POST',{recordId:inspection.id,name,mime:'image/png',base64:png});
+ const files=await ok('file-list?record='+inspection.id);assert.equal(files.length,2);
+ assert.equal((await fetch(origin+'/api/files/'+files[0].id)).status,401,'Ảnh kiểm tra chỉ được xem sau đăng nhập');
+ assert.equal((await fetch(origin+'/api/files/'+files[0].id,{headers:{Cookie:cookie}})).status,200);
+ inspection=await update(inspection,{assetName:'Ray cầu tàu khu vực phía Bắc',inspector:'Nguyễn Văn An\nTrần Thị Bình',responsibleName:'',responsibleTitle:'',collaboratorNames:'',collaboratorTitles:''});
+ const stored=await ok('v2/records/'+inspection.id);assert.equal(stored.assetName,'Ray cầu tàu khu vực phía Bắc');assert.equal(stored.inspector,'Nguyễn Văn An\nTrần Thị Bình');assert.equal(stored.responsibleName,'');assert.equal(stored.responsibleTitle,'');assert.equal((await ok('file-list?record='+inspection.id)).length,2);
+ for(const invalid of [{assetName:''},{assetName:null},{assetName:{}},{assetName:'x'.repeat(1001)},{inspector:''},{inspector:[]},{inspector:'x'.repeat(2001)},{responsibleName:null},{responsibleTitle:{}},{responsibleTitle:'x'.repeat(301)},{collaboratorNames:[]},{collaboratorTitles:[]},{collaboratorTitles:'x'.repeat(1501)},{conclusion:'  '}])assert.equal((await call('v2/records','POST',{...input,code:'KT-SAI-'+crypto.randomUUID().slice(0,8),...invalid})).status,400,JSON.stringify(invalid));
+ assert.equal((await call('v2/records','POST',{...input,code:'KT-SAI-LIEN-KET',assetId:99999999})).status,404,'Nhập tên tự do không bỏ qua kiểm tra liên kết hạng mục');
+ const activeGroup=(await ok('v2/catalogs')).catalogs.find(c=>c.type==='infrastructure'&&c.active).name;
+ const linkedAsset=await ok('v2/records','POST',{kind:'asset',code:'HT-KT-LIEN-KET',name:'Hạng mục liên kết cũ',assetType:'infrastructure',group:activeGroup,unit:'Phòng Kỹ thuật',location:'Cầu 2',responsibleId:1,operation:'Đang sử dụng',technical:'Tốt'});
+ let legacy=await ok('v2/records','POST',{kind:'inspection',code:'KT-DINH-DANG-CU',name:'Phiếu dùng hạng mục đã có',assetId:linkedAsset.id,inspectionDate:today(),inspector:'Người kiểm tra cũ',technical:'Hư hỏng nhẹ',conclusion:'Cần xử lý',responsibleId:1});
+ assert.equal((await ok('v2/records/'+linkedAsset.id)).technical,'Hư hỏng nhẹ','Phiếu liên kết tiếp tục cập nhật đánh giá hạng mục');
+ legacy=await update(legacy,{assetName:'Tên mô tả trên phiếu',responsibleName:'Tên nhập trực tiếp',responsibleTitle:'Kỹ sư',technical:'Cần theo dõi'});
+ assert.equal(legacy.assetId,linkedAsset.id);assert.equal(legacy.responsibleId,1);assert.equal((await ok('v2/records/'+linkedAsset.id)).name,'Hạng mục liên kết cũ','Nhập tên trên phiếu không đổi tên danh mục');
+ assert.equal((await ok('v2/records/'+linkedAsset.id)).technical,'Cần theo dõi');
+});
+
+test('Kiểm tra hiện trạng nhập trực tiếp: giữ quyền sở hữu và phạm vi đơn vị',async()=>{
+ const makeManager=async(username,name,unit)=>{
+  const list=await ok('users','POST',{name,username,password,role:'manager'}),account=list.find(u=>u.username===username);
+  await ok('v2/users','PUT',{id:account.id,unit});
+  return {account,session:(await call('login','POST',{username,password})).cookie};
+ };
+ const owner=await makeManager('inspection-owner','Người tạo phiếu kiểm tra','Đơn vị kiểm tra A'),other=await makeManager('inspection-other','Người phụ trách chỉ nhập tên','Đơn vị kiểm tra B');
+ const input={kind:'inspection',code:'KT-PHAM-VI',name:'Phiếu kiểm tra trong đơn vị',assetName:'Ray bến số 3',unit:'Đơn vị kiểm tra A',inspectionDate:today(),inspector:'Người kiểm tra A, Người kiểm tra B',technical:'Tốt',conclusion:'Đạt',responsibleName:other.account.name,responsibleTitle:'Kỹ sư',collaboratorNames:'Tên tự do',collaboratorTitles:'Chuyên viên'};
+ assert.equal((await call('v2/records','POST',{...input,code:'KT-NGOAI-DON-VI',unit:'Đơn vị kiểm tra B'},owner.session)).status,403);
+ const created=await call('v2/records','POST',input,owner.session);assert.equal(created.status,201);assert.equal(created.data.owner,owner.account.id);assert.equal(created.data.responsibleId,undefined);
+ assert.equal((await call('v2/records/'+created.data.id,'GET',undefined,other.session)).status,404,'Tên trên phiếu không tự cấp quyền truy cập cho tài khoản trùng tên');
+ assert.ok(!(await call('v2/records','GET',undefined,other.session)).data.some(r=>r.id===created.data.id));
+ const changed=await call('v2/records/'+created.data.id,'PUT',{...created.data,assetName:'Ray bến số 3 đoạn phía Bắc',responsibleName:'Người được phân công mới',responsibleTitle:'Tổ trưởng'},owner.session);
+ assert.equal(changed.status,200);assert.equal(changed.data.responsibleTitle,'Tổ trưởng');
+ assert.equal((await call('v2/records/'+created.data.id,'PUT',{...changed.data,unit:'Đơn vị kiểm tra B'},owner.session)).status,403);
 });

@@ -45,7 +45,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
   for(const key of ['plannedStart','due','start','completed','accepted','handover','inService','inspectionDate','expiry','nextInspection','detected','originalDue'])date(d[key],key);
   for(const key of ['budget','approvedBudget','cost','hours','km','quantity','cycle','meterDue'])if(d[key]!==undefined&&d[key]!=='')assert(Number.isFinite(Number(d[key]))&&Number(d[key])>=0,'Số liệu phải hữu hạn và không âm: '+key);
   assert(Array.isArray(d.assignees),'Danh sách phối hợp không hợp lệ');
-  if(['work','damage'].includes(k))for(const [key,max] of [['responsibleName',300],['collaboratorNames',1500]]){if(d[key]!==undefined){assert(typeof d[key]==='string'&&d[key].length<=max,'Tên phân công không hợp lệ (tối đa '+max+' ký tự)');d[key]=d[key].trim();}}
+  if(['work','damage','inspection'].includes(k))for(const [key,max] of [['responsibleName',300],['collaboratorNames',1500]]){if(d[key]!==undefined){assert(typeof d[key]==='string'&&d[key].length<=max,'Tên phân công không hợp lệ (tối đa '+max+' ký tự)');d[key]=d[key].trim();}}
   if(!canApprove(u)&&k==='asset'&&u.unit)assert(d.unit===u.unit||old&&d.unit===old.unit,'Không được chuyển hồ sơ sang đơn vị ngoài phạm vi',403);
   if(!canApprove(u)&&old)assert(Number(d.responsibleId||0)===Number(old.responsibleId||0),'Chỉ lãnh đạo được thay đổi người phụ trách',403);
   if(!canApprove(u))assert(String(d.approvedBudget||'')===String(old?.approvedBudget||''),'Chỉ lãnh đạo được cập nhật kinh phí phê duyệt',403);
@@ -58,8 +58,14 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
    assert(d.unit&&d.location&&d.responsibleId,'Cần đơn vị, vị trí và người phụ trách');
    assert(operation.includes(d.operation)&&technical.includes(d.technical),'Trạng thái tài sản không hợp lệ');
    if(d.parentId){const p=visible(u,d.parentId,'asset');assert(p.id!==old?.id,'Tài sản không thể là cấp trên của chính nó');let parent=p;const seen=new Set([old?.id]);while(parent){assert(!seen.has(parent.id),'Cấu trúc tài sản tạo vòng lặp');seen.add(parent.id);parent=parent.parentId?record(parent.parentId):null;}}
-  }else if(!project(k)&&(k!=='damage'||d.assetId)){visible(u,d.assetId,'asset');}
-  if(k==='inspection'){assert(d.inspectionDate&&d.conclusion&&d.inspector,'Phiếu kiểm tra cần ngày, người kiểm tra và kết luận');assert(!d.technical||technical.includes(d.technical),'Đánh giá kỹ thuật không hợp lệ');}
+  }else if(!project(k)&&(!['damage','inspection'].includes(k)||d.assetId)){visible(u,d.assetId,'asset');}
+  if(k==='inspection'){
+   for(const [key,max] of [['assetName',1000],['inspector',2000],['responsibleTitle',300],['collaboratorTitles',1500],['unit',300],['conclusion',10000]])if(d[key]!==undefined){assert(typeof d[key]==='string'&&d[key].length<=max,'Thông tin phiếu kiểm tra không hợp lệ: '+key+' (tối đa '+max+' ký tự)');d[key]=d[key].trim();}
+   assert(d.assetId||d.assetName,'Nhập hạng mục hạ tầng cần kiểm tra');
+   assert(d.inspectionDate&&d.conclusion&&d.inspector,'Phiếu kiểm tra cần ngày, người kiểm tra và kết luận');
+   assert(!d.technical||technical.includes(d.technical),'Đánh giá kỹ thuật không hợp lệ');
+   if(!d.assetId&&!canApprove(u)&&u.unit)assert(d.unit===u.unit||old&&d.unit===old.unit,'Không được chuyển phiếu kiểm tra sang đơn vị ngoài phạm vi',403);
+  }
   if(k==='damage'){
    assert(d.description&&d.detected&&d.due,'Hư hỏng cần mô tả, ngày phát hiện và hạn xử lý');
    if(d.location!==undefined){assert(typeof d.location==='string'&&d.location.length<=2000,'Vị trí, địa điểm hư hỏng tối đa 2.000 ký tự');d.location=d.location.trim();}
@@ -104,7 +110,7 @@ export function installOperations({db,assert,body,record,allowed,audit,hash,publ
   if(old){id=old.id;assert(db.prepare('UPDATE records SET data=?,updated=?,version=version+1 WHERE id=? AND version=?').run(JSON.stringify(d),at,id,old.version).changes,'Hồ sơ đã thay đổi, tải lại trước khi lưu',409)}
   else id=Number(db.prepare('INSERT INTO records(kind,data,updated) VALUES(?,?,?)').run(k,JSON.stringify(d),at).lastInsertRowid);
   audit(u,action,id,{before:old,after:d});
-  if(k==='inspection'&&d.technical){const asset=record(d.assetId);put(u,'asset',{...asset,technical:d.technical,lastInspection:d.inspectionDate,history:[...(asset.history||[]),{at,by:u.id,name:u.name,status:d.technical,previous:asset.technical,inspectionId:id}]},asset,'inspection-assessment');}
+  if(k==='inspection'&&d.technical&&d.assetId){const asset=record(d.assetId);put(u,'asset',{...asset,technical:d.technical,lastInspection:d.inspectionDate,history:[...(asset.history||[]),{at,by:u.id,name:u.name,status:d.technical,previous:asset.technical,inspectionId:id}]},asset,'inspection-assessment');}
   return record(id);
  }
  function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const r=fn();db.exec('COMMIT');return r}catch(e){db.exec('ROLLBACK');throw e}}

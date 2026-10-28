@@ -69,3 +69,18 @@ Chưa deploy bản này lên GitHub/Render thực tế; chưa chạy Docker tạ
 - Thử trình duyệt với DB tạm trống: tạo báo cáo với hai tên trống; chọn tệp TXT không hỗ trợ, hồ sơ được lưu và thông báo ảnh lỗi. Chọn lại 2 PNG qua hộp chọn tệp và bấm Lưu lần nữa: thành công, chỉ có 1 báo cáo.
 - Mở lại báo cáo: ảnh cũ hiển thị; gõ hai tên và chọn thêm PNG thứ 3; lưu thành công. API xác nhận đúng 1 hồ sơ/3 ảnh, hai tên lưu đúng, không có assetId giả hoặc dữ liệu File trong hồ sơ JSON.
 - Đã khởi động lại máy chủ sử dụng thật tại 3130 và khôi phục bản nháp cũ vào biểu mẫu mới; hai ô tên trống, ô vị trí nhập tự do và phần ảnh hiển thị. Không tự lưu hồ sơ thật.
+## Bỏ mục Nhật ký hiện trường riêng ngày 28 tháng 10 năm 2026
+
+- Build đạt; gói phục hồi giao diện gồm 14 tệp đã cập nhật SHA-256.
+- Bộ kiểm thử hiện có: **26/26 đạt**, không có kiểm thử thất bại. Các ca kiểm tra nhật ký, cập nhật tiến độ, ảnh gắn đúng nhật ký và chống xóa lịch sử qua cập nhật hồ sơ vẫn đạt trên dữ liệu tạm.
+- Trình duyệt thật tại cổng 3130: tải lại giao diện, mở menu, xác nhận mục Kiểm tra hiện trạng vẫn hiển thị và nút Nhật ký hiện trường không còn.
+- Chỉ sửa giao diện và tài liệu; API và dữ liệu sử dụng thật được giữ.
+
+## Kiểm tra hiện trạng nhập trực tiếp và ảnh · 28/10/2026
+
+- Build đạt; gói phục hồi giao diện 14 tệp đã cập nhật. Bộ kiểm thử: **28/28 đạt**.
+- Kiểm thử API mới: nhập hạng mục tự do, nhiều người kiểm tra, tên/chức danh phụ trách và phối hợp; lưu/đọc hai ảnh có xác thực, thay đổi/xóa thông tin, giữ ảnh cũ, thử lại sau lỗi ảnh không tạo trùng phiếu. Chặn kiểu/độ dài sai, hạng mục trống, người kiểm tra/kết luận trống, liên kết sai và chuyển đơn vị ngoài phạm vi. Tên tự do không cấp quyền cho tài khoản trùng tên.
+- Phiếu định dạng cũ vẫn liên kết hạng mục và cập nhật đánh giá kỹ thuật; nhập mô tả hạng mục trên phiếu không đổi tên danh mục.
+- Trình duyệt trên DB tạm tại localhost:3127: tạo phiếu với ba người kiểm tra, hai người phối hợp, hai chức danh và hai PNG; mở lại đổi hạng mục/chức danh, bổ sung PNG thứ ba, lưu thành công. Danh sách còn đúng một phiếu; chi tiết hiển thị đủ ba ảnh. Không lưu File hoặc assetId giả trong JSON.
+- Máy chủ thật tại cổng 3130 đã khởi động lại, `/healthz` trả `ok: true`. Biểu mẫu mới đã mở với bản nháp Ray cầu tàu và tên cũ; không tự lưu hồ sơ thật. Ảnh xác nhận: `.artifacts/inspection-form-20261028/inspection-direct-entry.png`, `inspection-form.png`, `inspection-attachments.png`.
+
