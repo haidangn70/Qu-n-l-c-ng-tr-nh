@@ -1,6 +1,8 @@
 
 # Quản lý hạ tầng Cảng Hải Phòng · Phiên bản 3
 
+Bản cập nhật ngày 29/10/2026 đã rà soát các luồng liên kết và đạt 41/41 kiểm thử. Xem `RA-SOAT-2026-10-29.md`, `GUIDE.md` và `CAP-NHAT-GITHUB.md`.
+
 Phòng Kỹ thuật – Công ty cổ phần Cảng Hải Phòng. Thiết kế: Mr Đăng · 0914931888.
 
 Giao diện vàng cam với minh họa cầu cảng, cần trục, tàu hàng và kho bãi. Chỉ hiển thị phân hệ hạ tầng. Dữ liệu phương tiện thiết bị cũ vẫn nằm trong cơ sở dữ liệu để tránh mất hồ sơ, không hiển thị hoặc cộng vào thống kê mới.
@@ -25,7 +27,7 @@ node reset-admin.mjs
 ## Nội dung chính
 
 - Tổng quan: thống kê hiện trạng, công trình cần quan tâm và 9 khu vực theo yêu cầu; thêm, đổi tên hoặc ẩn khu vực trong Danh mục & thiết lập. Đổi tên khu vực cập nhật các hồ sơ liên quan trong một giao dịch, tăng phiên bản để phát hiện xung đột.
-- Hạng mục: vị trí, quy mô, kết cấu, đơn vị quản lý, hiện trạng, người phụ trách chính và phối hợp.
+- Hạng mục & khu vực: tổng hợp hư hỏng và sửa chữa đang theo dõi theo khu vực; số lượng, cảnh báo quá hạn/gần hạn/ưu tiên, tiến độ và người phụ trách. Bỏ khai báo hạng mục tại màn hình này; có tìm kiếm, lọc, mở chi tiết và xuất Excel. Hồ sơ chưa chọn khu vực có nhóm riêng để bổ sung.
 - Sửa chữa: lập công việc độc lập cho hạng mục hoặc liên kết hư hỏng đã duyệt; kế hoạch, bàn giao mặt bằng, thi công, ngày hoàn thành, kinh phí, nghiệm thu.
 - Đầu tư mới: đề xuất → khảo sát → lập và duyệt dự án → chọn nhà thầu → bàn giao → thi công → hoàn thành xây dựng → chờ nghiệm thu → nghiệm thu → đóng.
 - Nhật ký thi công trong chi tiết từng công trình: ngày thi công, nội dung khối lượng, số lượng và đơn vị tính, tiến độ tổng thể, việc đã làm, việc tiếp theo, vướng mắc, ảnh/tài liệu gắn đúng nhật ký. Tổng khối lượng được nhóm theo nội dung và đơn vị, không cộng các đơn vị khác nhau. Khối lượng nhập là số phát sinh trong ngày; tiến độ là đánh giá tổng thể, không tự suy ra từ các khối lượng khác đơn vị.

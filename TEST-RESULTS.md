@@ -84,3 +84,19 @@ Chưa deploy bản này lên GitHub/Render thực tế; chưa chạy Docker tạ
 - Trình duyệt trên DB tạm tại localhost:3127: tạo phiếu với ba người kiểm tra, hai người phối hợp, hai chức danh và hai PNG; mở lại đổi hạng mục/chức danh, bổ sung PNG thứ ba, lưu thành công. Danh sách còn đúng một phiếu; chi tiết hiển thị đủ ba ảnh. Không lưu File hoặc assetId giả trong JSON.
 - Máy chủ thật tại cổng 3130 đã khởi động lại, `/healthz` trả `ok: true`. Biểu mẫu mới đã mở với bản nháp Ray cầu tàu và tên cũ; không tự lưu hồ sơ thật. Ảnh xác nhận: `.artifacts/inspection-form-20261028/inspection-direct-entry.png`, `inspection-form.png`, `inspection-attachments.png`.
 
+
+## Cập nhật 29/10/2026 · Tổng hợp Hạng mục & khu vực
+
+- Build và gói 14 tệp public đạt; bộ kiểm thử 30/30 đạt.
+- Hai kiểm tra mới xác nhận tổng hợp hư hỏng/sửa chữa theo khu vực, hồ sơ chưa phân khu, liên kết nhiều khu vực không trùng tổng số, tên khu vực chứa dấu phẩy, mốc nhắc sửa chữa 4 ngày và loại hồ sơ đã kết thúc/lưu trữ. API kiểm tra danh mục khu vực hư hỏng, hỗ trợ đổi tên và giữ khu vực cũ đã ẩn.
+- Trình duyệt trên DB tạm: 4 hư hỏng và 3 công trình đang theo dõi; chọn kho hiện 2 hồ sơ, lọc quá hạn còn 1. Bổ sung khu vực cho hồ sơ chưa phân khu từ biểu mẫu giữ tổng 7 hồ sơ, nhóm chưa phân khu biến mất. Màn hình không còn nút khai báo hạng mục.
+- Bản thật cổng 3130 đã nạp mã mới, hiển thị 2 hư hỏng chưa chọn khu vực và 1 công trình Nhà văn phòng (60%). Không sửa hồ sơ thật. Kiểm tra giao diện cửa sổ hẹp không tràn nội dung; không ghi nhận lỗi JavaScript.
+- Chứng cứ và kết quả: `.artifacts/area-watch-20261029/`; máy chủ thử 3127 đã dừng.
+
+## Cập nhật 29/10/2026 · Đầu tư nhập trực tiếp và rà soát tổng thể
+
+- Bộ kiểm thử hiện tại: 41/41 đạt, build đạt. Chi tiết các vấn đề và phạm vi kiểm tra trong RA-SOAT-2026-10-29.md.
+- Đầu tư: tạo tên phân công trống, sửa hạng mục/tên trực tiếp, thêm bốn ảnh; lỗi ảnh thử lại không trùng hồ sơ, Excel đọc lại đúng.
+- Rà soát: kiểm tra–hư hỏng–nhiều công trình, chặn đóng sớm, khóa ảnh sau kết thúc, phạm vi đơn vị với hồ sơ liên kết, ngày thực tế, ID liên kết, tiến độ theo mốc không vượt quy trình và cảnh báo theo mốc cập nhật thực tế.
+- Trình duyệt mở đủ 9 màn hình không ghi nhận lỗi JavaScript; thử đầu tư qua bàn giao, báo cáo 45% kèm ảnh, hoàn thành và nghiệm thu; cập nhật mốc lên 65%; khu vực ẩn vẫn chọn và giữ được; nội dung nguồn chuyển đúng giữa kiểm tra, hư hỏng và sửa chữa.
+- Dữ liệu thử tách khỏi data/ thật. Chứng cứ: .artifacts/investment-direct-entry-20261029/ và .artifacts/full-review-20261029/.

@@ -9,3 +9,9 @@ releases
 .private-login.txt
 preview-data
 infrastructure-tests.mjs
+.artifacts/
+tmp/
+output/
+node_modules/
+.env.*
+!.env.example

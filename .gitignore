@@ -10,3 +10,9 @@ preview-data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+.artifacts/
+tmp/
+output/
+node_modules/
+.env.*
+!.env.example

@@ -35,7 +35,7 @@ Phương án Render Shell: đặt ADMIN_USERNAME và ADMIN_PASSWORD phù hợp t
 
 - Log có dòng Ứng dụng: http://0.0.0.0:<PORT>; /healthz trả ok:true.
 - Trang đăng nhập có nền vàng cam và hình cảng; không còn mục Phương tiện thiết bị.
-- Đăng nhập, khai báo một hạng mục, tạo sửa chữa và đầu tư mới, gán người phối hợp.
+- Đăng nhập, nhập hư hỏng hoặc tạo sửa chữa/đầu tư trực tiếp theo khu vực, nhập tên phụ trách/phối hợp và xem tổng hợp trong Hạng mục & khu vực.
 - Đi qua phê duyệt, nhập ngày bàn giao và thi công, cập nhật khối lượng theo ngày và một ảnh hiện trường.
 - Tạo công việc hạn sau 4 ngày để xem cảnh báo. Chọn Xuất Excel và In/Lưu PDF để kiểm tra báo cáo.
 - Restart hoặc deploy lại; xác nhận hồ sơ và ảnh còn nguyên. Nếu mất, kiểm tra Persistent Disk và DATA_DIR ngay.
